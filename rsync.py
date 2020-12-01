@@ -1,6 +1,6 @@
 import os
 
-from utils import read_subjects
+import utils
 
 
 def sync_data_via_rsync(
@@ -37,18 +37,6 @@ def sync_data_via_rsync(
 
 if __name__ == "__main__":
 
-    config = {
-        subject_file = subjects.json,
-        rsync = {
-            user = "test_user",
-            host = "test_host",
-            src_path = "/data/{acq}"
-            target_path = "/home/data/test_project/scratch"
-        }
-    }
-
-    subjects = read_subjects(filename=config["subject_file"])
-    #sync_data_via(subjects=subjects,
-    #              user=config["rsync"]["user"],
-    #              host=config["rsync"]["host"])
-    #              path=config["rsync"]["data_path"]
+    config = utils.get_config(filename="config.yaml")
+    subjects = utils.read_subjects(filename=config["subject_file"])
+    #sync_data_via_rsync(subjects=subjects, config=config)

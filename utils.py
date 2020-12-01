@@ -1,5 +1,29 @@
 import json
+from pathlib import Path
 from typing import Union
+import yaml
+
+
+class ConfigError(Exception):
+    """Raised when there are missing parameters in the configuration"""
+    pass
+
+
+def get_config(filename: str) -> dict:
+    """ Read config from file.
+
+    Args:
+        filename: File to read the config from.
+    Returns:
+        The configuration as dictionary.
+    """
+    config_file = Path(filename)
+
+    with config_file.open('r') as config_f:
+        config = yaml.safe_load(config_f)
+
+    return config
+
 
 def read_subjects(filename: str) -> Union[list,dict]:
     """ Read in a json file
@@ -11,8 +35,9 @@ def read_subjects(filename: str) -> Union[list,dict]:
     """
 
     print("Reading file", filename)
+    sub_file = Path(filename)
 
-    with open(filename, "r") as my_file:
+    with sub_file.open("r") as my_file:
         data = my_file.read()
         subjects = json.loads(data)
 
