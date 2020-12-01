@@ -1,0 +1,10 @@
+subject_file: subjects.json
+rsync:
+    src:
+        user: my_user
+        host: my_host
+        path: path1
+    dest:
+        #user:
+        #host:
+        path: path2
