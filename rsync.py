@@ -3,10 +3,10 @@ import os
 import utils
 
 
-def _get_path(conf, acq):
-    user = conf.get("user", None)
-    host = conf.get("host", None)
-    path = conf["path"].format(acq)
+def _get_path(config, acq):
+    user = config.get("user", None)
+    host = config.get("host", None)
+    path = config["path"].format(acq)
 
     if user is None or host is None:
         return path
@@ -19,8 +19,8 @@ def sync_data_via_rsync(subjects: list, config: dict):
 
     Args:
         subjects: List of subjects.
-        config: A dictionary containing the rsync parameters. It has to containt
-            the following keys:
+        config: A dictionary containing the rsync parameters. It has to
+            constraint the following keys:
                 src:
                     user: The username with which get data.
                     host: The name of the source server to get data from.
@@ -66,6 +66,6 @@ def sync_data_via_rsync(subjects: list, config: dict):
 
 if __name__ == "__main__":
 
-    config = utils.get_config(filename="config.yaml")
-    subjects = utils.read_subjects(filename=config["subject_file"])
-    #sync_data_via_rsync(subjects=subjects, config=config)
+    conf = utils.get_config(filename="config.yaml")
+    subj = utils.read_subjects(filename=conf["subject_file"])
+#    sync_data_via_rsync(subjects=subj, config=conf)

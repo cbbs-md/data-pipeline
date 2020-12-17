@@ -6,7 +6,6 @@ import yaml
 
 class ConfigError(Exception):
     """Raised when there are missing parameters in the configuration"""
-    pass
 
 
 def get_config(filename: str) -> dict:
@@ -25,7 +24,7 @@ def get_config(filename: str) -> dict:
     return config
 
 
-def read_subjects(filename: str) -> Union[list,dict]:
+def read_subjects(filename: str) -> Union[list, dict]:
     """ Read in a json file
 
     Args:
@@ -61,4 +60,3 @@ def write_subjects(subjects: list, filename: str):
 
     with open(filename, "w") as my_file:
         json.dump(subjects, my_file, indent=4, sort_keys=True)
-
