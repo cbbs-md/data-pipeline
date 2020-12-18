@@ -1,4 +1,6 @@
-import os
+""" Import data via rsync """
+
+import subprocess
 
 import utils
 
@@ -30,6 +32,7 @@ def sync_data_via_rsync(subjects: list, config: dict):
                     host: The name of the target server to store the data to.
                     path: The path on the target system to store the data to.
     """
+    log = utils.setup_logging()
 
     for key in ["src", "dest"]:
         if key not in config["rsync"].keys():
@@ -53,19 +56,29 @@ def sync_data_via_rsync(subjects: list, config: dict):
         # --progress: show progress during transfer
         # --info=FLAG: fine-grained informational verbosity
         #    FLIST: Mention file-list receiving/sending (levels 1-2)
-        cmd = (
-            "rsync -acv --progress --info=FLIST0 {src} {dest}"
-            .format(src=src, dest=dest)
-        )
-        print("running command:\n", cmd)
+        cmd = ["rsync", "-acv", "--progress", "--info=FLIST0", src, dest]
+        log.info("running command: %s\n", " ".join(cmd))
 
-        os.system(cmd)
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True)
+            (output, error) = proc.communicate()
+            proc.wait()
+        except Exception:  # pylint: disable=broad-except
+            log.error("Error with command execution", exec_info=True)
 
-        # Todo get status and return value
+        if proc.returncode:
+            log.debug("Output of rsync command was %s", output)
+            log.error("An error occured in rsync executing:\n %s", error)
+            # TODO react to this
+
+
+def _main():
+
+    config = utils.get_config(filename="config.yaml")
+    subject = utils.read_subjects(filename=config["subject_file"])
+    sync_data_via_rsync(subjects=subject, config=config)
 
 
 if __name__ == "__main__":
-
-    conf = utils.get_config(filename="config.yaml")
-    subj = utils.read_subjects(filename=conf["subject_file"])
-#    sync_data_via_rsync(subjects=subj, config=conf)
+    _main()

@@ -1,4 +1,7 @@
+""" Collection of general utilities """
+
 import json
+import logging
 from pathlib import Path
 from typing import Union
 import yaml
@@ -22,6 +25,29 @@ def get_config(filename: str) -> dict:
         config = yaml.safe_load(config_f)
 
     return config
+
+
+def setup_logging(log_level=logging.DEBUG):
+    """ Set up a logger.
+
+    Args:
+        log_level: The logging level to end in the log handler.
+    """
+
+    logger = logging.getLogger(__name__)
+    handler = logging.StreamHandler()
+
+    formatter = logging.Formatter(
+            '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s'
+            # default:
+            # '%(levelname)s:%(name)s:%(message)s'
+    )
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.setLevel(log_level)
+
+    return logger
 
 
 def read_subjects(filename: str) -> Union[list, dict]:
