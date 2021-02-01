@@ -8,3 +8,12 @@ rsync:
         #user:
         #host:
         path: path2
+bids:
+    working_dir: working/dir/path
+    dataset_name: bids_autoconv
+    patches:
+        # syntax: (originalfile, patchfile)
+        # where originalfile should be relative to working_dir
+        - ["code/hirni-toolbox/converters/heudiconv/hirni_heuristic.py",
+           "patches/hirni_heuristic.patch"]
+        - ["dataset_description.json", "patches/dataset_description.patch"]

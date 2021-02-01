@@ -1,0 +1,11 @@
+-- a/dataset_description.json
++++ b/dataset_description.json
+@@ -10,7 +10,7 @@
+ "Ethics":
+ "",
+ "Funding":
+-"",
++[],
+ "HowToAcknowledge":
+ "",
+ "License":
