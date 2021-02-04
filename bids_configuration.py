@@ -1,6 +1,7 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
 import argparse
+import logging
 from pathlib import Path
 import subprocess
 
@@ -22,10 +23,12 @@ class BidsConfiguration(object):
         self.dataset_path = Path(self.config["working_dir"],
                                  self.config["dataset_name"])
 
+        self.log = logging.getLogger(self.__class__.__name__)
+
         try:
             self._setup_datalad()
-        except Exception:
-            print("ERROR: Something went wrong, remove dataset again")
+        except Exception:  # pylint: disable=broad-except
+            self.log.error("Something went wrong", exc_info=True)
             # in case anything goes wrong in setup remove data to ensure
             # repeatability
             self._remove_all()
@@ -81,7 +84,8 @@ class BidsConfiguration(object):
 
             if output.stdout:
                 # no additional newline after output
-                print(output.stdout.decode("utf-8"), end="")
+                # print(output.stdout.decode("utf-8"), end="")
+                self.log.info(output.stdout.decode("utf-8"))
 
         # TODO commit to dataset: orig files
 
@@ -162,6 +166,21 @@ class BidsConfiguration(object):
         )
 
 
+def _setup_logging(name=""):
+    logger = logging.getLogger(name)
+    handler = logging.StreamHandler()
+
+    fmt = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+#    fmt = ("[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] "
+#           "[%(name)s] [%(levelname)s] %(message)s")
+    formatter = logging.Formatter(fmt)
+
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.propagate = False
+
+
 def argument_parsing():
     """Parsing command line arguments.
     """
@@ -179,6 +198,7 @@ def argument_parsing():
 
 if __name__ == "__main__":
 
+    _setup_logging()
     args = argument_parsing()
 
     #anon = 20
