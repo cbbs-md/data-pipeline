@@ -3,6 +3,7 @@
 import argparse
 import logging
 from pathlib import Path
+import shutil
 import subprocess
 
 import datalad.api as datalad
@@ -115,39 +116,54 @@ class BidsConfiguration(object):
 
         # creates a subdataset <acqid> under sourcedata/dicoms
 
-    def register_rule(self, rule: str, overwrite: bool=False):
+    def apply_rule(self, rule: str, overwrite: bool = False):
+        """Register datalad hirni rule"""
 
-        rule_file = Path("code/costum_rules", rule)
-
-        # reset studyspec to avoid problems with next imported dataset
-        # (this dataset: default spec merged with rule, next dataset: only rule)
-        with Path("sourcedata/studyspec.json").open() as f:
-            f.write("")
+        rule_dir = Path("code/costum_rules")
+        rule_file = Path(rule_dir, rule)
+        acqid = "bids_config_test_set"
 
         config = self.dataset.config
-        if not conig.hast_options("datalad.hirni.dicom2spec", "rules"):
+        # cases
+        # 1. no rule defined -> add rule, clear studyspec, copy tmp_rule
+        # 2. rule definied + same rule file -> clear studyspec, copy tmp_rule
+        # 3. rule definied + different rule file:
+        #   3.1 overwrite: overwrite rule, clear studyspec, copy tmp_rule
+        #   3.2 no overwrite: do nothing
 
-            # reset studyspec to avoid problems with next imported dataset
-            # (this dataset: default spec merged with rule,
-            #  next dataset: only rule)
-            with Path("sourcedata/studyspec.json").open() as f:
-                f.write("")
-
-        elif not overwrite:
-            print("Already registered rule detected.")
+        if not config.has_option("datalad.hirni.dicom2spec", "rules"):
+            set_rule = True
+        elif config.get("datalad.hirni.dicom2spec.rules") == rule_file:
+            set_rule = False
+        elif overwrite:
+            set_rule = True
+        else:
+            self.log.error("Already registered rule detected.")
             return
 
-        # get rule file: cp <orig location> rule_fule
+        if set_rule:
+            config.set("datalad.hirni.dicom2spec.rules",
+                       rule_file, where='dataset')
 
-        config.add("datalad.hirni.dicom2spec.rules",
-                   rule_file, where='dataset')
+        # reset studyspec to avoid problems with next imported dataset
+        # (this dataset: default spec merged with rule,
+        #  next dataset: only rule)
+        spec_path = Path(self.dataset_path, acqid, "studyspec.json")
+        spec_path.write_text("")
+        # TODO this does not work, since the anon_subject is errased as well
 
-        # TODO commit in dataset
+        # generate costume rule dir
+        abs_rule_dir = Path(self.dataset_path, rule_dir)
+        if not abs_rule_dir.exists():
+            abs_rule_dir.mkdir(parents=True)
 
+        # get rule file: cp <orig location> rule_file
+        source = "tmp_rule.py"
+        shutil.move(source, Path(self.dataset_path, rule_file))
+        shutil.copy(Path("patches/rules_base.py"),
+                    Path(self.dataset_path, rule_dir))
 
-    def modify_rule(self):
-        # cp rule over
-        pass
+        # TODO commit in dataset: changed .datalad.config, studyspec.json
 
     def generate_preview(self):
         # datalad get sourcedata/dicoms/*
@@ -206,6 +222,11 @@ def argument_parsing():
         help="Sets up a datalad dataset and prepares the convesion",
         action="store_true"
     )
+    parser.add_argument(
+        "--apply_rule",
+        help="Registers and applies datalad hirni rule",
+        action="store_true"
+    )
 
     return parser.parse_args()
 
@@ -223,6 +244,9 @@ if __name__ == "__main__":
             anon_subject=20,
             tarball="/path/to/data/original/sourcedata.tar.gz",
         )
+    elif args.apply_rule:
+        conv = BidsConfiguration(skip_setup=True)
+        conv.apply_rule(rule=rule, overwrite=True)
 
 
 #for debugging: remove dataset again:
