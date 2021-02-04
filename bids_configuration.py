@@ -14,7 +14,7 @@ import utils
 
 class BidsConfiguration(object):
 
-    def __init__(self):
+    def __init__(self, skip_setup=False):
         self.dataset = None
         # in case something goes wrong
         self.mark_dataset_to_be_removed = False
@@ -24,6 +24,10 @@ class BidsConfiguration(object):
                                  self.config["dataset_name"])
 
         self.log = logging.getLogger(self.__class__.__name__)
+
+        if skip_setup:
+            self.dataset = datalad.Dataset(self.dataset_path)
+            return
 
         try:
             self._setup_datalad()
