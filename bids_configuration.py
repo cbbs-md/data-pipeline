@@ -28,7 +28,7 @@ def argument_parsing():
     return args
 
 
-class BidsConvertion(object):
+class BidsConfiguration(object):
 
     def __init__(self):
         self.dataset = None
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     #tarball = ../../original/sourcedata.tar.gz
     rule = "myrules.py"
 
-    conv = BidsConvertion()
+    conv = BidsConfiguration()
 
 
     #setup_datalad()
