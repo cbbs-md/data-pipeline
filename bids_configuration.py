@@ -1,7 +1,9 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
 import argparse
+import contextlib
 import logging
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,6 +13,23 @@ import datalad_hirni as hirni
 import jsonschema
 
 import utils
+
+
+class ChangeWorkingDir(contextlib.ContextDecorator):
+    """ Change the working directory temporaly """
+
+    def __init__(self, new_wd):
+        self.current_wd = None
+        self.new_wd = new_wd
+
+    def __enter__(self):
+        self.current_wd = Path.cwd()
+        os.chdir(self.new_wd)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.current_wd)
+        # signal that the exception was handled and the program should continue
+        return True
 
 
 class BidsConfiguration(object):
@@ -166,19 +185,38 @@ class BidsConfiguration(object):
         # TODO commit in dataset: changed .datalad.config, studyspec.json
 
     def generate_preview(self):
-        # datalad get sourcedata/dicoms/*
+        """ Generade bids converion """
+        acqid = "bids_config_test_set"
 
-        # datalad hirni-dicom2spec -s sourcedata/studyspec.json sourcedata/dicoms
-        # arguments:
-        # path=None, spec=None, dataset=None, subject=None,
-        # anon_subject=None, acquisition=None, properties=None
-        hirni.dicom2spec(
-            spec="sourcedata/studyspec.json",
+        # TODO clean up old bids convertion
+
+        # datalad get bids_config_test_set/dicoms/*
+        # datalad.get(dataset=str(Path(acqid, "dicoms")))
+
+        spec = str(Path(acqid, "studyspec.json"))
+
+        # datalad hirni-dicom2spec -s bids_config_test_set/studyspec.json \
+        #     bids_config_test_set/dicoms
+        # FIX since dicom2spec only looks for rule file in current dir and not
+        # in dataset dir
+        with ChangeWorkingDir(self.dataset_path):
+            datalad.hirni_dicom2spec(
+                path=str(Path(acqid, "dicoms")),
+                spec=spec,
+                dataset=self.dataset,
+                # subject=
+                # anon_subject=
+                # acquisition=
+                # properties=
+            )
+
+        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
+        datalad.hirni_spec2bids(
+            specfile=spec,
             dataset=self.dataset,
-            path="sourcedata/dicoms",
+            anonymize=True,
+            # only_type=
         )
-
-        #datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
 
     def _remove_all(self):
         """ Removes the created dataset
@@ -188,7 +226,7 @@ class BidsConfiguration(object):
         if not self.mark_dataset_to_be_removed:
             return
 
-        # datalad remove -r --nocheck -d /home/nela/projects/Antonias_data/try_hirni/bids_autoconv
+        # datalad remove -r --nocheck -d bids_autoconv
         datalad.remove(
             dataset=self.dataset_path,
             recursive=True,
@@ -227,6 +265,11 @@ def argument_parsing():
         help="Registers and applies datalad hirni rule",
         action="store_true"
     )
+    parser.add_argument(
+        "--generate_preview",
+        help="Generates the BIDS converion",
+        action="store_true"
+    )
 
     return parser.parse_args()
 
@@ -247,7 +290,10 @@ if __name__ == "__main__":
     elif args.apply_rule:
         conv = BidsConfiguration(skip_setup=True)
         conv.apply_rule(rule=rule, overwrite=True)
+    elif args.generate_preview:
+        conv = BidsConfiguration(skip_setup=True)
+        conv.generate_preview()
 
 
-#for debugging: remove dataset again:
-#datalad remove -r --nocheck -d bids_autoconv
+# for debugging: remove dataset again:
+# datalad remove -r --nocheck -d bids_autoconv
