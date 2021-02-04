@@ -93,16 +93,26 @@ class BidsConfiguration(object):
 
         # TODO commit to dataset: orig files
 
-    def import_data(self, anon: str, tarball: str):
-        # arguments:
-        # path, acqid=None, dataset=None, subject=None,
-        # anon_subject=None, properties=None
-        hirni.import_dicoms(
+    def import_data(self, anon_subject: str, tarball: str):
+        """ Import tarball as subdataset
+
+        Args:
+            anon_subject: anonymize subject identifier
+            tarball: path to tarball to import
+        """
+
+        # datalad hirni-import-dcm --anon-subject "$ANON" \
+        #   ../../original/sourcedata.tar.gz sourcedata
+
+        datalad.hirni_import_dcm(
             dataset=self.dataset,
+            anon_subject=anon_subject,
+            # subject=
             path=tarball,
-            anon_subject=anon,
-            acqid="sourcedata"
+            acqid="bids_config_test_set",
+            # properties=
         )
+
         # creates a subdataset <acqid> under sourcedata/dicoms
 
     def register_rule(self, rule: str, overwrite: bool=False):
@@ -205,15 +215,15 @@ if __name__ == "__main__":
     _setup_logging()
     args = argument_parsing()
 
-    #anon = 20
-    #tarball = ../../original/sourcedata.tar.gz
     rule = "myrules.py"
 
-    conv = BidsConfiguration()
+    if args.import_data:
+        conv = BidsConfiguration(skip_setup=False)
+        conv.import_data(
+            anon_subject=20,
+            tarball="/path/to/data/original/sourcedata.tar.gz",
+        )
 
-
-    #setup_datalad()
-    #import_data()
 
 #for debugging: remove dataset again:
 #datalad remove -r --nocheck -d bids_autoconv
