@@ -11,23 +11,6 @@ import jsonschema
 import utils
 
 
-def argument_parsing():
-    """Parsing command line arguments.
-    """
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--setup",
-        help="Sets up a datalad dataset and prepares the convesion",
-        action="store_true"
-    )
-
-    args = parser.parse_args()
-
-    return args
-
-
 class BidsConfiguration(object):
 
     def __init__(self):
@@ -185,7 +168,25 @@ class BidsConfiguration(object):
             check=False
         )
 
+
+def argument_parsing():
+    """Parsing command line arguments.
+    """
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--import_data",
+        help="Sets up a datalad dataset and prepares the convesion",
+        action="store_true"
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+
+    args = argument_parsing()
 
     #anon = 20
     #tarball = ../../original/sourcedata.tar.gz
