@@ -19,7 +19,6 @@ class BidsConfiguration(object):
         self.mark_dataset_to_be_removed = False
 
         self.config = self._get_config(filename="config.yaml")
-        self.working_dir = Path(self.config["working_dir"])
         self.dataset_path = Path(self.config["working_dir"],
                                  self.config["dataset_name"])
 
@@ -51,7 +50,6 @@ class BidsConfiguration(object):
         }
 
         config = utils.get_config(filename=filename)
-        print(config)
 
         jsonschema.validate(config, schema)
         # TODO catch jsonschema.exceptions.ValidationError for proper logging
@@ -72,25 +70,20 @@ class BidsConfiguration(object):
 
         # apply patches
         patches = self.config.get("patches", [])
-        #patch_dir = Path("patches")
-        #patches = (
-        #    (self.dataset_path/"code/hirni-toolbox/converters/heudiconv/hirni_heuristic.py",
-        #     patch_dir/"hirni_heuristic.patch"),
-        #    (self.dataset_path/"dataset_description.json",
-        #     patch_dir/"dataset_description.patch")
-        #)
-
         for orig, patch in patches:
             cmd = ["patch", "-u", self.dataset_path/orig, "-i", patch]
-            output = subprocess.run(cmd, capture_output=True)
-
-            if output.returncode:
-                print("ERROR:", output.stderr.decode("utf-8"))
+            try:
+                output = subprocess.run(cmd, capture_output=True, check=True)
+            except Exception:
+                print("ERROR: failed apply patch")
                 self.mark_dataset_to_be_removed = True
-                raise Exception("ERROR: failed apply patch")
-            elif output.stdout:
+                raise
+
+            if output.stdout:
                 # no additional newline after output
                 print(output.stdout.decode("utf-8"), end="")
+
+        # TODO commit to dataset: orig files
 
     def import_data(self, anon: str, tarball: str):
         # arguments:
