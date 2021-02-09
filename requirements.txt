@@ -1,0 +1,4 @@
+datalad
+datalad-hirni
+jsonschema
+PyYAML
