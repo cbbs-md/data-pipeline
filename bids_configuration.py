@@ -9,7 +9,6 @@ import shutil
 import subprocess
 
 import datalad.api as datalad
-import datalad_hirni as hirni
 import jsonschema
 
 import utils
@@ -32,30 +31,18 @@ class ChangeWorkingDir(contextlib.ContextDecorator):
         return True
 
 
-class BidsConfiguration(object):
+class SetupDatalad(object):
 
-    def __init__(self, skip_setup=False):
-        self.dataset = None
-        # in case something goes wrong
-        self.mark_dataset_to_be_removed = False
-
+    def __init__(self):
         self.config = self._get_config(filename="config.yaml")
+        self.dataset_name = self.config["dataset_name"]
         self.dataset_path = Path(self.config["working_dir"],
                                  self.config["dataset_name"])
-
         self.log = logging.getLogger(self.__class__.__name__)
 
-        if skip_setup:
-            self.dataset = datalad.Dataset(self.dataset_path)
-            return
-
-        try:
-            self._setup_datalad()
-        except Exception:  # pylint: disable=broad-except
-            self.log.error("Something went wrong", exc_info=True)
-            # in case anything goes wrong in setup remove data to ensure
-            # repeatability
-            self._remove_all()
+        # in case something goes wrong
+        self.mark_to_remove = False
+        self.dataset = None
 
     @staticmethod
     def _get_config(filename):
@@ -83,14 +70,15 @@ class BidsConfiguration(object):
 
         return config["bids"]
 
-    def _setup_datalad(self):
+    def run(self):
         "Set up dataset to be used and apply patches"
 
         if self.dataset_path.exists():
-            self.mark_dataset_to_be_removed = False
+            self.mark_to_remove = False
             raise Exception("ERROR: dataset under {} already exists"
                             .format(self.dataset_path))
 
+#        with ChangeWorkingDir(self.working_path):
         self.dataset = datalad.create(str(self.dataset_path))
 
         datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
@@ -100,11 +88,18 @@ class BidsConfiguration(object):
         for orig, patch in patches:
             cmd = ["patch", "-u", self.dataset_path/orig, "-i", patch]
             try:
-                output = subprocess.run(cmd, capture_output=True, check=True)
+                #output = subprocess.run(cmd, capture_output=True, check=True)
+                output = subprocess.run(cmd, capture_output=True)
             except Exception:
-                print("ERROR: failed apply patch")
-                self.mark_dataset_to_be_removed = True
+                self.log.error("Failed apply patch")
+                self.mark_to_remove = True
                 raise
+
+            if output.returncode:
+                self.log.error("Failed apply patch, error was: {}"
+                               .format(output.stderr))
+                self.mark_to_remove = True
+
 
             if output.stdout:
                 # no additional newline after output
@@ -112,6 +107,35 @@ class BidsConfiguration(object):
                 self.log.info(output.stdout.decode("utf-8"))
 
         # TODO commit to dataset: orig files
+
+    def _remove_all(self):
+        """ Removes the created dataset
+
+        This is mainly used for testing.
+        """
+        if not self.mark_to_removed:
+            return
+
+        # datalad remove -r --nocheck -d bids_autoconv
+        datalad.remove(
+            dataset=self.dataset_path,
+            recursive=True,
+            check=False
+        )
+
+
+class BidsConfiguration(object):
+
+    def __init__(self, dataset_path):
+        self.dataset_path = dataset_path
+
+        # in case something goes wrong
+        self.mark_dataset_to_be_removed = False
+
+        self.log = logging.getLogger(self.__class__.__name__)
+
+        self.dataset = datalad.Dataset(self.dataset_path)
+        # TODO replace with datalad require_dataset?
 
     def import_data(self, anon_subject: str, tarball: str):
         """ Import tarball as subdataset
@@ -140,7 +164,6 @@ class BidsConfiguration(object):
 
         rule_dir = Path("code/costum_rules")
         rule_file = Path(rule_dir, rule)
-        acqid = "bids_config_test_set"
 
         config = self.dataset.config
         # cases
@@ -164,12 +187,7 @@ class BidsConfiguration(object):
             config.set("datalad.hirni.dicom2spec.rules",
                        rule_file, where='dataset')
 
-        # reset studyspec to avoid problems with next imported dataset
-        # (this dataset: default spec merged with rule,
-        #  next dataset: only rule)
-        spec_path = Path(self.dataset_path, acqid, "studyspec.json")
-        spec_path.write_text("")
-        # TODO this does not work, since the anon_subject is errased as well
+        self._reset_studyspec()
 
         # generate costume rule dir
         abs_rule_dir = Path(self.dataset_path, rule_dir)
@@ -184,6 +202,17 @@ class BidsConfiguration(object):
 
         # TODO commit in dataset: changed .datalad.config, studyspec.json
 
+    def _reset_studyspec(self):
+        """ reset studyspec to avoid problems with next imported dataset
+
+        (this dataset: default spec merged with rule,
+        next dataset: only rule)
+        """
+
+        acqid = "bids_config_test_set"
+        Path(self.dataset_path, acqid, "studyspec.json").write_text("")
+        # TODO this does not work, since the anon_subject is errased as well
+
     def generate_preview(self):
         """ Generade bids converion """
         acqid = "bids_config_test_set"
@@ -194,6 +223,7 @@ class BidsConfiguration(object):
         # datalad.get(dataset=str(Path(acqid, "dicoms")))
 
         spec = str(Path(acqid, "studyspec.json"))
+        self.log.info("Generate study specification file")
 
         # datalad hirni-dicom2spec -s bids_config_test_set/studyspec.json \
         #     bids_config_test_set/dicoms
@@ -210,27 +240,14 @@ class BidsConfiguration(object):
                 # properties=
             )
 
+        self.log.info("Convert to BIDS based on study specification")
+
         # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
         datalad.hirni_spec2bids(
             specfile=spec,
             dataset=self.dataset,
             anonymize=True,
             # only_type=
-        )
-
-    def _remove_all(self):
-        """ Removes the created dataset
-
-        This is mainly used for testing.
-        """
-        if not self.mark_dataset_to_be_removed:
-            return
-
-        # datalad remove -r --nocheck -d bids_autoconv
-        datalad.remove(
-            dataset=self.dataset_path,
-            recursive=True,
-            check=False
         )
 
 
@@ -246,6 +263,7 @@ def _setup_logging(name=""):
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
+#    logger.setLevel(logging.WARNING)  # does not change datalad log level
     logger.propagate = False
 
 
@@ -281,19 +299,24 @@ if __name__ == "__main__":
 
     rule = "myrules.py"
 
+    setup = SetupDatalad()
     if args.import_data:
-        conv = BidsConfiguration(skip_setup=False)
+        setup.run()
+        # TODO can this be moved down into the other if?
+
+    dataset_path = setup.dataset_path
+    conv = BidsConfiguration(dataset_path)
+
+    if args.import_data:
         conv.import_data(
             anon_subject=20,
-            tarball="/path/to/data/original/sourcedata.tar.gz",
+            tarball="/home/nela/projects/Antonias_data/"
+                    "original/sourcedata.tar.gz",
         )
     elif args.apply_rule:
-        conv = BidsConfiguration(skip_setup=True)
         conv.apply_rule(rule=rule, overwrite=True)
     elif args.generate_preview:
-        conv = BidsConfiguration(skip_setup=True)
         conv.generate_preview()
-
 
 # for debugging: remove dataset again:
 # datalad remove -r --nocheck -d bids_autoconv
