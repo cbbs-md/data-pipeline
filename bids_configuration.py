@@ -32,6 +32,7 @@ class ChangeWorkingDir(contextlib.ContextDecorator):
 
 
 class SetupDatalad(object):
+    """ Set up a datalad dataset and preconfigure it"""
 
     def __init__(self):
         self.config = self._get_config(filename="config.yaml")
@@ -121,6 +122,7 @@ class SetupDatalad(object):
 
 
 class BidsConfiguration(object):
+    """ Enables configuration of rules to for bids convertions """
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
@@ -293,16 +295,12 @@ if __name__ == "__main__":
     _setup_logging()
     args = argument_parsing()
 
-    rule = "myrules.py"
-
     setup = SetupDatalad()
     if args.import_data:
         setup.run()
         # TODO can this be moved down into the other if?
 
-    dataset_path = setup.dataset_path
-    conv = BidsConfiguration(dataset_path)
-
+    conv = BidsConfiguration(setup.dataset_path)
     if args.import_data:
         conv.import_data(
             anon_subject=20,
@@ -310,7 +308,7 @@ if __name__ == "__main__":
                     "original/sourcedata.tar.gz",
         )
     elif args.apply_rule:
-        conv.apply_rule(rule=rule, overwrite=True)
+        conv.apply_rule(rule="myrules.py", overwrite=True)
     elif args.generate_preview:
         conv.generate_preview()
 
