@@ -37,7 +37,7 @@ class SetupDatalad(object):
         self.config = self._get_config(filename="config.yaml")
         self.dataset_name = self.config["dataset_name"]
         self.dataset_path = Path(self.config["working_dir"],
-                                 self.config["dataset_name"])
+                                 self.config["dataset_name"]).expanduser()
         self.log = logging.getLogger(self.__class__.__name__)
 
         # in case something goes wrong
@@ -78,7 +78,6 @@ class SetupDatalad(object):
             raise Exception("ERROR: dataset under {} already exists"
                             .format(self.dataset_path))
 
-#        with ChangeWorkingDir(self.working_path):
         self.dataset = datalad.create(str(self.dataset_path))
 
         datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
