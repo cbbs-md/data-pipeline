@@ -83,25 +83,44 @@ class SetupDatalad(object):
 
         datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
 
+        self._apply_patches()
+
+    def _apply_patches(self):
         # apply patches
         patches = self.config.get("patches", [])
-        for orig, patch in patches:
-            cmd = ["patch", "-u", self.dataset_path/orig, "-i", patch]
+
+        if not patches:
+            self.log.debug("No patches to apply")
+            return
+
+        self.log.debug("patches %s", patches)
+        for patch in patches:
+            patch = Path(patch).expanduser()  # to be able to cope with ~
+            cmd = ["patch", "-p0", "-d", self.dataset_path, "-i", patch]
+            # -pN Strip smallest prefix containing num leading slashes from
+            #   files.
+            # -d DIR Change the working directory to DIR first.
+            # -i PATCHFILE Read patch from PATCHFILE instead of stdin.
+
             try:
-                #output = subprocess.run(cmd, capture_output=True, check=True)
+                # pylint: disable=subprocess-run-check
                 output = subprocess.run(cmd, capture_output=True)
             except Exception:
                 self.log.error("Failed to apply patch")
                 raise
 
-            if output.returncode:
-                self.log.error("Failed apply patch, error was: {}"
-                               .format(output.stderr))
-
             if output.stdout:
                 # no additional newline after output
                 # print(output.stdout.decode("utf-8"), end="")
                 self.log.info(output.stdout.decode("utf-8"))
+
+            # capture return code explicitely instead of useing subprocess
+            # parameter check=True to be able to log error message
+            if output.returncode:
+                self.log.debug("cmd: %s", " ".join(cmd))
+                self.log.error("Failed to apply patch, error was: %s",
+                               output.stderr.decode("utf-8"))
+                raise Exception("Failed to apply patch")
 
         # TODO commit to dataset: orig files
 
