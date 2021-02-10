@@ -133,6 +133,8 @@ class BidsConfiguration(object):
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
 
+        self.acqid = "bids_config_test_set"
+
     def import_data(self, anon_subject: str, tarball: str):
         """ Import tarball as subdataset
 
@@ -149,7 +151,7 @@ class BidsConfiguration(object):
             anon_subject=anon_subject,
             # subject=
             path=tarball,
-            acqid="bids_config_test_set",
+            acqid=self.acqid,
             # properties=
         )
 
@@ -205,20 +207,18 @@ class BidsConfiguration(object):
         next dataset: only rule)
         """
 
-        acqid = "bids_config_test_set"
-        Path(self.dataset_path, acqid, "studyspec.json").write_text("")
+        Path(self.dataset_path, self.acqid, "studyspec.json").write_text("")
         # TODO this does not work, since the anon_subject is errased as well
 
     def generate_preview(self):
         """ Generade bids converion """
-        acqid = "bids_config_test_set"
 
         # TODO clean up old bids convertion
 
         # datalad get bids_config_test_set/dicoms/*
-        # datalad.get(dataset=str(Path(acqid, "dicoms")))
+        # datalad.get(dataset=str(Path(self.acqid, "dicoms")))
 
-        spec = str(Path(acqid, "studyspec.json"))
+        spec = str(Path(self.acqid, "studyspec.json"))
         self.log.info("Generate study specification file")
 
         # datalad hirni-dicom2spec -s bids_config_test_set/studyspec.json \
@@ -227,7 +227,7 @@ class BidsConfiguration(object):
         # in dataset dir
         with ChangeWorkingDir(self.dataset_path):
             datalad.hirni_dicom2spec(
-                path=str(Path(acqid, "dicoms")),
+                path=str(Path(self.acqid, "dicoms")),
                 spec=spec,
                 dataset=self.dataset,
                 # subject=
