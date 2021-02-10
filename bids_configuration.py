@@ -90,15 +90,12 @@ class SetupDatalad(object):
                 #output = subprocess.run(cmd, capture_output=True, check=True)
                 output = subprocess.run(cmd, capture_output=True)
             except Exception:
-                self.log.error("Failed apply patch")
-                self.mark_to_remove = True
+                self.log.error("Failed to apply patch")
                 raise
 
             if output.returncode:
                 self.log.error("Failed apply patch, error was: {}"
                                .format(output.stderr))
-                self.mark_to_remove = True
-
 
             if output.stdout:
                 # no additional newline after output
@@ -112,7 +109,7 @@ class SetupDatalad(object):
 
         This is mainly used for testing.
         """
-        if not self.mark_to_removed:
+        if not self.mark_to_remove:
             return
 
         # datalad remove -r --nocheck -d bids_autoconv
