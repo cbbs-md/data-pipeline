@@ -9,6 +9,7 @@ import shutil
 import subprocess
 
 import datalad.api as datalad
+import json
 import jsonschema
 
 import utils
@@ -143,10 +144,21 @@ class SetupDatalad(object):
         )
 
 
+def read_spec(file_name: str or Path):
+    """ Reads a datalad spec file and converts it into proper python objects"""
+
+    # allow string
+    file_name = Path(file_name)
+
+    # strip: file may contain empty lines
+    lines = file_name.read_text().strip().split("\n")
+    return list(map(json.loads, lines))
+
+
 class BidsConfiguration(object):
     """ Enables configuration of rules to for bids convertions """
 
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path: str or Path):
         self.dataset_path = dataset_path
 
         # in case something goes wrong
@@ -227,12 +239,20 @@ class BidsConfiguration(object):
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
 
+        dicomseries:all entry is needed for hirni to convert data properly
         (this dataset: default spec merged with rule,
         next dataset: only rule)
         """
 
-        Path(self.dataset_path, self.acqid, "studyspec.json").write_text("")
-        # TODO this does not work, since the anon_subject is errased as well
+        spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
+        spec_list = read_spec(spec_file)
+        dicomseries_all = [i for i in spec_list
+                           if i["type"] == "dicomseries:all"]
+
+        # write dicomseries:all
+        with spec_file.open("w") as f:
+            for i in dicomseries_all:
+                f.write(json.dumps(i) + "\n")
 
     def generate_preview(self):
         """ Generade bids converion """
