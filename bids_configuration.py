@@ -41,8 +41,6 @@ class SetupDatalad(object):
                                  self.config["dataset_name"]).expanduser()
         self.log = logging.getLogger(self.__class__.__name__)
 
-        # in case something goes wrong
-        self.mark_to_remove = False
         self.dataset = None
 
     @staticmethod
@@ -75,15 +73,20 @@ class SetupDatalad(object):
         "Set up dataset to be used and apply patches"
 
         if self.dataset_path.exists():
-            self.mark_to_remove = False
             raise Exception("ERROR: dataset under {} already exists"
                             .format(self.dataset_path))
 
-        self.dataset = datalad.create(str(self.dataset_path))
+        try:
+            self.dataset = datalad.create(str(self.dataset_path))
+            datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
 
-        datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
+            self._apply_patches()
+            # TODO commit to dataset: orig files
 
-        self._apply_patches()
+        except Exception:
+            self.log.error("Some error occurred", exc_info=True)
+            self._remove_all()
+            raise
 
     def _apply_patches(self):
         # apply patches
@@ -122,16 +125,11 @@ class SetupDatalad(object):
                                output.stderr.decode("utf-8"))
                 raise Exception("Failed to apply patch")
 
-        # TODO commit to dataset: orig files
-
     def _remove_all(self):
         """ Removes the created dataset
 
         This is mainly used for testing.
         """
-        if not self.mark_to_remove:
-            return
-
         # datalad remove -r --nocheck -d bids_autoconv
         datalad.remove(
             dataset=self.dataset_path,
