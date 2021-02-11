@@ -12,4 +12,6 @@ bids:
     working_dir: working/dir/path
     dataset_name: bids_autoconv
     patches:
-        - "/path/to/patch/hirni_heuristic.patch"
+        # Either the full path to the patch or use {data_pipeline_path}
+        # to refer to the current path of the data-pipeline source code
+        - "{data_pipeline_path}/patches/hirni_heuristic.patch"

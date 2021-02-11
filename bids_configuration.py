@@ -98,8 +98,13 @@ class SetupDatalad(object):
 
         self.log.debug("patches %s", patches)
         for patch in patches:
+            patch = patch.format(
+                data_pipeline_path=Path(__file__).parent.absolute()
+            )
             patch = Path(patch).expanduser()  # to be able to cope with ~
-            cmd = ["patch", "-p0", "-d", self.dataset_path, "-i", patch]
+
+            cmd = ["patch", "-p0", "-d", str(self.dataset_path),
+                   "-i", str(patch)]
             # -pN Strip smallest prefix containing num leading slashes from
             #   files.
             # -d DIR Change the working directory to DIR first.
