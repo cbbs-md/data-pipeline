@@ -143,17 +143,6 @@ class SetupDatalad(object):
         )
 
 
-def read_spec(file_name: str or Path):
-    """ Reads a datalad spec file and converts it into proper python objects"""
-
-    # allow string
-    file_name = Path(file_name)
-
-    # strip: file may contain empty lines
-    lines = file_name.read_text().strip().split("\n")
-    return list(map(json.loads, lines))
-
-
 class BidsConfiguration(object):
     """ Enables configuration of rules to for bids convertions """
 
@@ -244,7 +233,7 @@ class BidsConfiguration(object):
         """
 
         spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
-        spec_list = read_spec(spec_file)
+        spec_list = utils.read_spec(spec_file)
         dicomseries_all = [i for i in spec_list
                            if i["type"] == "dicomseries:all"]
 

@@ -86,3 +86,18 @@ def write_subjects(subjects: list, filename: str):
 
     with open(filename, "w") as my_file:
         json.dump(subjects, my_file, indent=4, sort_keys=True)
+
+
+def read_spec(file_name: str or Path):
+    """ Reads a datalad spec file and converts it into proper python objects
+
+    Args:
+        file_name: the studyspec file name.
+    """
+
+    # allow string
+    file_name = Path(file_name)
+
+    # strip: file may contain empty lines
+    lines = file_name.read_text().strip().split("\n")
+    return list(map(json.loads, lines))
