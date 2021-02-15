@@ -249,35 +249,63 @@ class BidsConfiguration(object):
         )
 
 
-def configure_bids_conversion():
-    """ Sets up a datalad dataset and prepares the convesion """
-
-    while True:
-        answer = questionary.rawselect(
-            "What do you want to do?",
-            choices=[
+def ask_questions():
+    """ Define and ask the questionary for the user"""
+    questions = [
+        {
+            "type": "select",
+            "name": "step_select",
+            "message": "What do you want to do?",
+            "choices": [
                 # Sets up a datalad dataset and prepares the convesion
                 "Import data",
                 # Registers and applies datalad hirni rule
                 "Apply rule",
                 # Generates the BIDS converion
                 "Generate preview",
+                questionary.Separator(),
                 "Exit"
             ],
-        ).ask()
+            "use_shortcuts": True,
+            "default": "Exit",
+
+        },
+        {
+            "type": "text",
+            "name": "anon_subject",
+            "message": "Define anon_subject:",
+            "when": lambda x: x["step_select"] == "Import data",
+        },
+        {
+            "type": "path",
+            "name": "data_path",
+            "message": "Path to the data tar ball:",
+            "when": lambda x: x["step_select"] == "Import data",
+        },
+    ]
+    return questionary.prompt(questions)
+
+
+def configure_bids_conversion():
+    """ Sets up a datalad dataset and prepares the convesion """
+
+    while True:
+        answer = ask_questions()
+        if not answer or answer["step_select"] == "Exit":
+            break
+
+        step = answer["step_select"]
+        print("answer", answer)
 
         setup = SetupDatalad()
         conv = BidsConfiguration(setup.dataset_path)
-        if answer == "Import data":
+        if step == "Import data":
             setup.run()
             conv.import_data(
-                anon_subject=20,
-                tarball="/home/nela/projects/Antonias_data/"
-                        "original/sourcedata_reduced.tar.xz",
+                anon_subject=answer["anon_subject"],
+                tarball=answer["data_path"],
             )
-        elif answer == "Apply rule":
+        elif step == "Apply rule":
             conv.apply_rule(rule="myrules.py", overwrite=True)
-        elif answer == "Generate preview":
+        elif step == "Generate preview":
             conv.generate_preview()
-        elif answer == "Exit":
-            break
