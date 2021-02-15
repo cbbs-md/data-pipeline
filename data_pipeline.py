@@ -43,6 +43,10 @@ def _setup_logging(name=__name__):
         }
     })
 
+    # workaround for broken datalad logging
+    # if not disabled it will flood the logs
+    logging.getLogger("datalad").setLevel(logging.WARNING)
+
 
 def argument_parsing():
     """Parsing command line arguments.
