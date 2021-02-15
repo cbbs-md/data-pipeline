@@ -2,7 +2,7 @@
 import argparse
 import logging
 
-from bids_configuration import SetupDatalad, BidsConfiguration
+from bids_configuration import configure_bids_conversion
 
 
 def _setup_logging(name=__name__):
@@ -53,20 +53,9 @@ def argument_parsing():
     """
 
     parser = argparse.ArgumentParser()
-
     parser.add_argument(
-        "--import_data",
-        help="Sets up a datalad dataset and prepares the convesion",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--apply_rule",
-        help="Registers and applies datalad hirni rule",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--generate_preview",
-        help="Generates the BIDS converion",
+        "--configure",
+        help="Prepares and configure the bids convesion",
         action="store_true"
     )
 
@@ -75,25 +64,8 @@ def argument_parsing():
 
 if __name__ == "__main__":
 
-    _setup_logging()
+    _setup_logging("data-pipeline")
     args = argument_parsing()
 
-    setup = SetupDatalad()
-    if args.import_data:
-        setup.run()
-        # TODO can this be moved down into the other if?
-
-    conv = BidsConfiguration(setup.dataset_path)
-    if args.import_data:
-        conv.import_data(
-            anon_subject=20,
-            tarball="/home/nela/projects/Antonias_data/"
-                    "original/sourcedata.tar.gz",
-        )
-    elif args.apply_rule:
-        conv.apply_rule(rule="myrules.py", overwrite=True)
-    elif args.generate_preview:
-        conv.generate_preview()
-
-# for debugging: remove dataset again:
-# datalad remove -r --nocheck -d bids_autoconv
+    if args.configure:
+        configure_bids_conversion()

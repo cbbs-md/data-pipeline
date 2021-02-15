@@ -8,6 +8,7 @@ import subprocess
 
 import datalad.api as datalad
 import jsonschema
+import questionary
 
 import utils
 
@@ -260,3 +261,35 @@ class BidsConfiguration(object):
             anonymize=True,
             # only_type=
         )
+
+
+def configure_bids_conversion():
+    """ Sets up a datalad dataset and prepares the convesion """
+
+    answer = questionary.rawselect(
+        "What do you want to do?",
+        choices=[
+            # Sets up a datalad dataset and prepares the convesion
+            "Import data",
+            # Registers and applies datalad hirni rule
+            "Apply rule",
+            # Generates the BIDS converion
+            "Generate preview"],
+    ).ask()
+
+    setup = SetupDatalad()
+    if answer == "Import data":
+        setup.run()
+        # TODO can this be moved down into the other if?
+
+    conv = BidsConfiguration(setup.dataset_path)
+    if answer == "Import data":
+        conv.import_data(
+            anon_subject=20,
+            tarball="/home/nela/projects/Antonias_data/"
+                    "original/sourcedata.tar.gz",
+        )
+    elif answer == "Apply rule":
+        conv.apply_rule(rule="myrules.py", overwrite=True)
+    elif answer == "Generate preview":
+        conv.generate_preview()
