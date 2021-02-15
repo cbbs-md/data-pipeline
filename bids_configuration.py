@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 import shutil
-import subprocess
 
 import datalad.api as datalad
 import jsonschema
@@ -94,25 +93,7 @@ class SetupDatalad(object):
             # -d DIR Change the working directory to DIR first.
             # -i PATCHFILE Read patch from PATCHFILE instead of stdin.
 
-            try:
-                # pylint: disable=subprocess-run-check
-                output = subprocess.run(cmd, capture_output=True)
-            except Exception:
-                self.log.error("Failed to apply patch")
-                raise
-
-            if output.stdout:
-                # no additional newline after output
-                # print(output.stdout.decode("utf-8"), end="")
-                self.log.info(output.stdout.decode("utf-8"))
-
-            # capture return code explicitely instead of useing subprocess
-            # parameter check=True to be able to log error message
-            if output.returncode:
-                self.log.debug("cmd: %s", " ".join(cmd))
-                self.log.error("Failed to apply patch, error was: %s",
-                               output.stderr.decode("utf-8"))
-                raise Exception("Failed to apply patch")
+            utils.run_cmd(cmd, self.log, error_message="Failed to apply patch")
 
     def _remove_all(self):
         """ Removes the created dataset
