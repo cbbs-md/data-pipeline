@@ -112,17 +112,15 @@ class BidsConfiguration(object):
     """ Enables configuration of rules to for bids convertions """
 
     def __init__(self, dataset_path: str or Path):
-        self.dataset_path = dataset_path
+        self.dataset_path = Path(dataset_path)
 
         # in case something goes wrong
         self.mark_dataset_to_be_removed = False
-
         self.log = utils.get_logger(__class__)
-
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
 
-        self.acqid = "bids_config_test_set"
+        self.acqid = "bids_rule_config"
 
     def import_data(self, anon_subject: str, tarball: str):
         """ Import tarball as subdataset
@@ -135,7 +133,7 @@ class BidsConfiguration(object):
         # datalad hirni-import-dcm --anon-subject "$ANON" \
         #   ../../original/sourcedata.tar.gz sourcedata
 
-        self.log.info("Import %s ad anon-subject %s and aquisition %s",
+        self.log.info("Import %s as anon-subject %s and aquisition %s",
                       tarball, anon_subject, self.acqid)
 
         # creates a subdataset <acqid> under sourcedata/dicoms
@@ -147,6 +145,11 @@ class BidsConfiguration(object):
             acqid=self.acqid,
             # properties=
         )
+
+        self.log.info("Structure of imported data:")
+        data_path = Path(self.dataset_path, self.acqid, "dicoms", "sourcedata",
+                         str(anon_subject))
+        utils.run_cmd(["tree", "-L", "1", data_path], self.log)
 
     def apply_rule(self, rule: str, overwrite: bool = False):
         """Register datalad hirni rule"""
