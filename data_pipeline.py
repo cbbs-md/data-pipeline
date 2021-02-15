@@ -12,7 +12,7 @@ def _setup_logging():
         "disable_existing_loggers": False,
         "formatters": {
             "simple": {
-                "format": "[%(name)s] [%(levelname)s] %(message)s"
+                "format": "[%(levelname)s] %(message)s"
             },
             "precise": {
                 "format": ("[%(asctime)s] [%(name)s] [%(levelname)s] "
@@ -36,7 +36,7 @@ def _setup_logging():
         },
         "loggers": {
             "": {
-                "handlers": ["file"],
+                "handlers": ["console", "file"],
                 "level": "INFO",
                 "propagate": True
             }
