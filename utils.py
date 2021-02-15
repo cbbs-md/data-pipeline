@@ -90,7 +90,7 @@ def write_subjects(subjects: list, filename: str):
         json.dump(subjects, my_file, indent=4, sort_keys=True)
 
 
-def read_spec(file_name: str or Path):
+def read_spec(file_name: str or Path) -> list:
     """ Reads a datalad spec file and converts it into proper python objects
 
     Args:
@@ -120,3 +120,31 @@ class ChangeWorkingDir(contextlib.ContextDecorator):
         os.chdir(self.current_wd)
         # signal that the exception was handled and the program should continue
         return True
+
+
+def get_logger_name() -> str:
+    """ Returns a common logger name
+
+    This should make it easier to identify the modules as part of the
+    data-pipeline tool set.
+    """
+    return "data-pipeline"
+
+
+def get_logger(my_class, postfix=None) -> logging.Logger:
+    """Return a logger with a name corresponding to the tool set.
+
+    Will return a logger of the the name data-pipeline.<class_module>.<class>
+    or if postfix is set data-pipeline.<class_module>.<class><postfix>
+
+    Args:
+        my_class: class descriptor opject __class__
+        postfix: optional postfix to be added after the class logger name
+    """
+    name = "{}.{}.{}".format(get_logger_name(),
+                             my_class.__module__,
+                             my_class.__name__)
+    if postfix is not None:
+        name += postfix
+
+    return logging.getLogger(name)

@@ -1,7 +1,6 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
 import json
-import logging
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,8 +22,7 @@ class SetupDatalad(object):
         self.dataset_path = Path(self.config["working_dir"],
                                  self.config["dataset_name"]).expanduser()
 
-        self.log = logging.getLogger(__class__.__module__
-                                     + '.' + __class__.__name__)
+        self.log = utils.get_logger(__class__)
         self.dataset = None
 
     @staticmethod
@@ -59,6 +57,8 @@ class SetupDatalad(object):
         if self.dataset_path.exists():
             raise Exception("ERROR: dataset under {} already exists"
                             .format(self.dataset_path))
+
+        self.log.info("Run datalad setup")
 
         try:
             self.dataset = datalad.create(str(self.dataset_path))
@@ -136,7 +136,7 @@ class BidsConfiguration(object):
         # in case something goes wrong
         self.mark_dataset_to_be_removed = False
 
-        self.log = logging.getLogger(self.__class__.__name__)
+        self.log = utils.get_logger(__class__)
 
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
@@ -154,6 +154,10 @@ class BidsConfiguration(object):
         # datalad hirni-import-dcm --anon-subject "$ANON" \
         #   ../../original/sourcedata.tar.gz sourcedata
 
+        self.log.info("Import %s ad anon-subject %s and aquisition %s",
+                      tarball, anon_subject, self.acqid)
+
+        # creates a subdataset <acqid> under sourcedata/dicoms
         datalad.hirni_import_dcm(
             dataset=self.dataset,
             anon_subject=anon_subject,
@@ -162,8 +166,6 @@ class BidsConfiguration(object):
             acqid=self.acqid,
             # properties=
         )
-
-        # creates a subdataset <acqid> under sourcedata/dicoms
 
     def apply_rule(self, rule: str, overwrite: bool = False):
         """Register datalad hirni rule"""

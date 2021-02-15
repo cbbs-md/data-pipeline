@@ -5,7 +5,7 @@ import logging
 from bids_configuration import configure_bids_conversion
 
 
-def _setup_logging(name=__name__):
+def _setup_logging():
 
     logging.config.dictConfig({
         "version": 1,
@@ -64,7 +64,7 @@ def argument_parsing():
 
 if __name__ == "__main__":
 
-    _setup_logging("data-pipeline")
+    _setup_logging()
     args = argument_parsing()
 
     if args.configure:
