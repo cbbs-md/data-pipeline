@@ -1,9 +1,7 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
-import contextlib
 import json
 import logging
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,23 +10,6 @@ import datalad.api as datalad
 import jsonschema
 
 import utils
-
-
-class ChangeWorkingDir(contextlib.ContextDecorator):
-    """ Change the working directory temporaly """
-
-    def __init__(self, new_wd):
-        self.current_wd = None
-        self.new_wd = new_wd
-
-    def __enter__(self):
-        self.current_wd = Path.cwd()
-        os.chdir(self.new_wd)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        os.chdir(self.current_wd)
-        # signal that the exception was handled and the program should continue
-        return True
 
 
 class SetupDatalad(object):
@@ -257,7 +238,7 @@ class BidsConfiguration(object):
         #     bids_config_test_set/dicoms
         # FIX since dicom2spec only looks for rule file in current dir and not
         # in dataset dir
-        with ChangeWorkingDir(self.dataset_path):
+        with utils.ChangeWorkingDir(self.dataset_path):
             datalad.hirni_dicom2spec(
                 path=str(Path(self.acqid, "dicoms")),
                 spec=spec,

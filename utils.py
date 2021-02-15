@@ -1,7 +1,9 @@
 """ Collection of general utilities """
 
+import contextlib
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Union
 import yaml
@@ -101,3 +103,20 @@ def read_spec(file_name: str or Path):
     # strip: file may contain empty lines
     lines = file_name.read_text().strip().split("\n")
     return list(map(json.loads, lines))
+
+
+class ChangeWorkingDir(contextlib.ContextDecorator):
+    """ Change the working directory temporaly """
+
+    def __init__(self, new_wd):
+        self.current_wd = None
+        self.new_wd = new_wd
+
+    def __enter__(self):
+        self.current_wd = Path.cwd()
+        os.chdir(self.new_wd)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.current_wd)
+        # signal that the exception was handled and the program should continue
+        return True
