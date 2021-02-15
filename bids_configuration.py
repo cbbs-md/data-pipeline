@@ -16,12 +16,14 @@ class SetupDatalad(object):
     """ Set up a datalad dataset and preconfigure it"""
 
     def __init__(self):
+
         self.config = self._get_config(filename="config.yaml")
         self.dataset_name = self.config["dataset_name"]
         self.dataset_path = Path(self.config["working_dir"],
                                  self.config["dataset_name"]).expanduser()
-        self.log = logging.getLogger(self.__class__.__name__)
 
+        self.log = logging.getLogger(__class__.__module__
+                                     + '.' + __class__.__name__)
         self.dataset = None
 
     @staticmethod

@@ -5,20 +5,43 @@ import logging
 from bids_configuration import SetupDatalad, BidsConfiguration
 
 
-def _setup_logging(name=""):
-    logger = logging.getLogger(name)
-    handler = logging.StreamHandler()
+def _setup_logging(name=__name__):
 
-    fmt = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
-#    fmt = ("[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] "
-#           "[%(name)s] [%(levelname)s] %(message)s")
-    formatter = logging.Formatter(fmt)
-
-    handler.setFormatter(formatter)
-
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)  # does not change datalad log level
-    logger.propagate = False
+    logging.config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "simple": {
+                "format": "[%(name)s] [%(levelname)s] %(message)s"
+            },
+            "precise": {
+                "format": ("[%(asctime)s] [%(name)s] [%(levelname)s] "
+                           "%(message)s")
+            }
+        },
+        "handlers": {
+            "console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "formatter": "simple"
+            },
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "level": "INFO",
+                "formatter": "precise",
+                "filename": "data_pipeline.log",
+                "maxBytes": 10485760,
+                "backupCount": 3,
+            }
+        },
+        "loggers": {
+            "": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": True
+            }
+        }
+    })
 
 
 def argument_parsing():
