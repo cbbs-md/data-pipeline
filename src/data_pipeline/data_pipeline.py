@@ -3,7 +3,7 @@ import logging
 
 import click
 
-from bids_configuration import configure_bids_conversion
+from data_pipeline.bids_configuration import configure_bids_conversion
 
 
 def _setup_logging():
@@ -52,7 +52,7 @@ def _setup_logging():
 @click.command()
 @click.option('--configure', is_flag=True,
               help="Prepares and configure the bids convesion")
-def _main(configure):
+def main(configure):
     #_setup_logging()
 
     if configure:
@@ -60,4 +60,4 @@ def _main(configure):
 
 
 if __name__ == "__main__":
-    _main()  # pylint: disable=no-value-for-parameter
+    main()  # pylint: disable=no-value-for-parameter

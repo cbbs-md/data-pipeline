@@ -9,7 +9,7 @@ import datalad.api as datalad
 import jsonschema
 import questionary
 
-import utils
+import data_pipeline.utils as utils
 
 
 class SetupDatalad(object):
