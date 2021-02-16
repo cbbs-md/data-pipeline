@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 
+import click
 import datalad.api as datalad
 import jsonschema
 import questionary
@@ -151,10 +152,10 @@ class BidsConfiguration(object):
                          str(anon_subject))
         utils.run_cmd(["tree", "-L", "1", data_path], self.log)
 
-    def apply_rule(self, rule: str, overwrite: bool = False):
+    def apply_rule(self, rule_dir: str, rule: str,
+                   overwrite: bool = False):
         """Register datalad hirni rule"""
 
-        rule_dir = Path("code/costum_rules")
         rule_file = Path(rule_dir, rule)
 
         config = self.dataset.config
@@ -186,11 +187,11 @@ class BidsConfiguration(object):
         if not abs_rule_dir.exists():
             abs_rule_dir.mkdir(parents=True)
 
-        # get rule file: cp <orig location> rule_file
-        source = "tmp_rule.py"
-        shutil.move(source, Path(self.dataset_path, rule_file))
-        shutil.copy(Path("patches/rules_base.py"),
-                    Path(self.dataset_path, rule_dir))
+        abs_rule_file = Path(self.dataset_path, rule_file)
+        if not abs_rule_file.exists():
+            shutil.copy(Path("patches/custom_rules_template.py"),
+                        abs_rule_file)
+        click.edit(filename=abs_rule_file)
 
         # TODO commit in dataset: changed .datalad.config, studyspec.json
 
@@ -260,7 +261,7 @@ def ask_questions():
                 # Sets up a datalad dataset and prepares the convesion
                 "Import data",
                 # Registers and applies datalad hirni rule
-                "Apply rule",
+                "Configure and apply rule",
                 # Generates the BIDS converion
                 "Generate preview",
                 questionary.Separator(),
@@ -294,18 +295,22 @@ def configure_bids_conversion():
         if not answer or answer["step_select"] == "Exit":
             break
 
-        step = answer["step_select"]
-        print("answer", answer)
+        mode = answer["step_select"]
 
         setup = SetupDatalad()
         conv = BidsConfiguration(setup.dataset_path)
-        if step == "Import data":
+        if mode == "Import data":
             setup.run()
             conv.import_data(
                 anon_subject=answer["anon_subject"],
                 tarball=answer["data_path"],
             )
-        elif step == "Apply rule":
-            conv.apply_rule(rule="myrules.py", overwrite=True)
-        elif step == "Generate preview":
+        elif mode == "Configure and apply rule":
+            conv.apply_rule(
+                rule_dir=Path("code", "costum_rules"),
+                rule="custom_rules.py",
+                overwrite=True
+            )
+        elif mode == "Generate preview":
             conv.generate_preview()
+            # run procedures
