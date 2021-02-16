@@ -1,6 +1,7 @@
 
-import argparse
 import logging
+
+import click
 
 from bids_configuration import configure_bids_conversion
 
@@ -48,24 +49,15 @@ def _setup_logging():
     logging.getLogger("datalad").setLevel(logging.WARNING)
 
 
-def argument_parsing():
-    """Parsing command line arguments.
-    """
+@click.command()
+@click.option('--configure', is_flag=True,
+              help="Prepares and configure the bids convesion")
+def _main(configure):
+    #_setup_logging()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--configure",
-        help="Prepares and configure the bids convesion",
-        action="store_true"
-    )
-
-    return parser.parse_args()
+    if configure:
+        configure_bids_conversion()
 
 
 if __name__ == "__main__":
-
-    _setup_logging()
-    args = argument_parsing()
-
-    if args.configure:
-        configure_bids_conversion()
+    _main()  # pylint: disable=no-value-for-parameter
