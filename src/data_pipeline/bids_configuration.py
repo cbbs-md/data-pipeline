@@ -119,32 +119,40 @@ class BidsConfiguration(object):
         next dataset: only rule)
         """
 
-        spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
-        spec_list = utils.read_spec(spec_file)
+        spec_list = utils.read_spec(self.spec_file)
         dicomseries_all = [i for i in spec_list
                            if i["type"] == "dicomseries:all"]
 
         # write dicomseries:all
-        with spec_file.open("w") as f:
+        with self.spec_file.open("w") as f:
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
     def generate_preview(self):
         """ Generade bids converion """
 
-        # TODO clean up old bids convertion
+        spec = self.spec_file.relative_to(self.dataset_path)
+        self._create_studyspec(spec)
 
-        # datalad get bids_config_test_set/dicoms/*
-        # datalad.get(dataset=str(Path(self.acqid, "dicoms")))
+-        self.log.info("Convert to BIDS based on study specification")
+-
+-        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
+-        datalad.hirni_spec2bids(
+-            specfile=spec,
+-            dataset=self.dataset,
+-            anonymize=True,
+-            # only_type=
+-        )
 
-        spec = str(Path(self.acqid, "studyspec.json"))
+    def _create_studyspec(self, spec):
+
         self.log.info("Generate study specification file")
 
-        # datalad hirni-dicom2spec -s bids_config_test_set/studyspec.json \
-        #     bids_config_test_set/dicoms
-        # FIX since dicom2spec only looks for rule file in current dir and not
-        # in dataset dir
+        # Fix needed since dicom2spec only looks for rule file in current dir
+        # and not in dataset dir
         with utils.ChangeWorkingDir(self.dataset_path):
+            # datalad hirni-dicom2spec -s bids_rule_config/studyspec.json \
+            #     bids_rule_config/dicoms
             datalad.hirni_dicom2spec(
                 path=str(Path(self.acqid, "dicoms")),
                 spec=spec,
@@ -154,16 +162,6 @@ class BidsConfiguration(object):
                 # acquisition=
                 # properties=
             )
-
-        self.log.info("Convert to BIDS based on study specification")
-
-        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
-        datalad.hirni_spec2bids(
-            specfile=spec,
-            dataset=self.dataset,
-            anonymize=True,
-            # only_type=
-        )
 
 
 def ask_questions():
