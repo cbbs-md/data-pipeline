@@ -139,13 +139,27 @@ class BidsConfiguration(object):
 
         self.log.info("Convert to BIDS based on study specification")
 
+        # since logging can not be controlled when using the datalad api, the
+        # console output will be flooded -> sircument it by using the command
+        # line interface
+        with utils.ChangeWorkingDir(self.dataset_path):
+            utils.run_cmd(
+                [
+                    "datalad",
+                    "hirni-spec2bids",
+                    "--anonymize",
+                    spec
+                ],
+                self.log
+            )
+
         # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
-        datalad.hirni_spec2bids(
-            specfile=spec,
-            dataset=self.dataset,
-            anonymize=True,
-            # only_type=
-        )
+#        datalad.hirni_spec2bids(
+#            specfile=spec,
+#            dataset=self.dataset,
+#            anonymize=True,
+#            # only_type=
+#        )
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
@@ -166,21 +180,6 @@ class BidsConfiguration(object):
         self.log.info("Preview:\n %s",
                       self._put_side_by_side(src_tree, bids_tree))
 
-    @staticmethod
-    def _put_side_by_side(left: list, right: list) -> str:
-
-        col_width = max(len(line) for line in left) + 2  # padding
-
-        max_len = max(len(left), len(right))
-        left.extend([""] * (max_len - len(left)))
-        right.extend([""] * (max_len - len(right)))
-
-        result = ""
-        for row in zip(left, right):
-            result += "".join(word.ljust(col_width) for word in row) + "\n"
-
-        return result
-
     def _create_studyspec(self, spec):
 
         self.log.info("Generate study specification file")
@@ -199,6 +198,21 @@ class BidsConfiguration(object):
                 # acquisition=
                 # properties=
             )
+
+    @staticmethod
+    def _put_side_by_side(left: list, right: list) -> str:
+
+        col_width = max(len(line) for line in left) + 2  # padding
+
+        max_len = max(len(left), len(right))
+        left.extend([""] * (max_len - len(left)))
+        right.extend([""] * (max_len - len(right)))
+
+        result = ""
+        for row in zip(left, right):
+            result += "".join(word.ljust(col_width) for word in row) + "\n"
+
+        return result
 
 
 def ask_questions():
