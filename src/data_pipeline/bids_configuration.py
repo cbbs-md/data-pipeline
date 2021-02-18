@@ -134,15 +134,23 @@ class BidsConfiguration(object):
         spec = self.spec_file.relative_to(self.dataset_path)
         self._create_studyspec(spec)
 
--        self.log.info("Convert to BIDS based on study specification")
--
--        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
--        datalad.hirni_spec2bids(
--            specfile=spec,
--            dataset=self.dataset,
--            anonymize=True,
--            # only_type=
--        )
+        # Clean up old bids convertion
+        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
+        if bids_dir.exists():
+            self.log.info("Target directory %s for bids conversion already "
+                          "exists. Remove and reuse it.", bids_dir)
+
+            shutil.rmtree(bids_dir)
+
+        self.log.info("Convert to BIDS based on study specification")
+
+        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
+        datalad.hirni_spec2bids(
+            specfile=spec,
+            dataset=self.dataset,
+            anonymize=True,
+            # only_type=
+        )
 
     def _create_studyspec(self, spec):
 
