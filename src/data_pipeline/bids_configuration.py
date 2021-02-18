@@ -171,7 +171,7 @@ class BidsConfiguration(object):
         bids_tree[0] = "result:"
 
         self.log.info("Preview:\n %s",
-                      self._put_side_by_side(src_tree, bids_tree))
+                      utils.show_side_by_side(src_tree, bids_tree))
 
     def _create_studyspec(self, spec):
 
@@ -191,21 +191,6 @@ class BidsConfiguration(object):
                 # acquisition=
                 # properties=
             )
-
-    @staticmethod
-    def _put_side_by_side(left: list, right: list) -> str:
-
-        col_width = max(len(line) for line in left) + 2  # padding
-
-        max_len = max(len(left), len(right))
-        left.extend([""] * (max_len - len(left)))
-        right.extend([""] * (max_len - len(right)))
-
-        result = ""
-        for row in zip(left, right):
-            result += "".join(word.ljust(col_width) for word in row) + "\n"
-
-        return result
 
 
 def ask_questions() -> (dict, dict):

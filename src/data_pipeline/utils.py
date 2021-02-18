@@ -236,3 +236,36 @@ def run_cmd_piped(cmds: list,
         raise Exception()
 
     return output.decode("utf-8")
+
+
+def show_side_by_side(left: list, right: list) -> str:
+    """ Shows two lists side by side
+
+    For example:
+    left = ["first line left"]
+    right = ["first line right", second line right]
+    will result in
+    "llllllllllllllllll  rrrrrrrrrrrrrr\n
+    llllllll            r\n
+                        rrrrrrrrrr\n"
+
+    Args:
+        left: Content of the left column
+        right: Content of the right column
+
+    Return:
+        A string where both lists are printed side by side.
+    """
+
+    col_width = max(len(line) for line in left) + 2  # padding
+
+    max_len = max(len(left), len(right))
+    left.extend([""] * (max_len - len(left)))
+    right.extend([""] * (max_len - len(right)))
+
+    result = ""
+    for row in zip(left, right):
+        result += "".join(word.ljust(col_width) for word in row) + "\n"
+
+    return result
+
