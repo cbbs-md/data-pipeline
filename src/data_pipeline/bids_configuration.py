@@ -86,22 +86,26 @@ class BidsConfiguration(object):
         if not abs_rule_dir.exists():
             abs_rule_dir.mkdir(parents=True)
 
-        # copy rule_base
-        abs_rule_base_file = Path(self.dataset_path, rule_dir, "rules_base.py")
-        if not abs_rule_base_file.exists():
-            # TODO patch hirni and put rule_base inside of it
-            rule_base = Path(Path(__file__).parent.absolute(),
-                             "patches/rules_base.py")
-            shutil.copy(rule_base, abs_rule_base_file)
+        # copy rule_base and rule template
+        rules_to_copy = [
+            # (source file name, target file name)
+            ("rules_base.py", "rules_base.py"),
+            ("custom_rules.py", rule),
+            # TODO use correct template, this is only for dev
+#            ("custom_rule_template.py", rule),
+        ]
 
-        # copy rule template
+        # TODO patch hirni and put rule_base inside of it
+        for src_name, target_name in rules_to_copy:
+            target = Path(self.dataset_path, rule_dir, src_name)
+            if not target.exists():
+                source = Path(Path(__file__).parent.absolute(),
+                              "patches", target_name)
+                shutil.copy(source, target)
+
+        # edit rule template
         abs_rule_file = Path(self.dataset_path, rule_file)
-        if not abs_rule_file.exists():
-            template = Path(Path(__file__).parent.absolute(),
-                            "patches/custom_rules.py")
-#           TODO use correct template, this is only for dev
-#                           "patches/custom_rules_template.py")
-            shutil.copy(template, abs_rule_file)
+        self.log.info("Opening %s", abs_rule_file)
         click.edit(filename=abs_rule_file)
 
         # TODO commit in dataset: changed .datalad.config, studyspec.json
