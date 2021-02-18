@@ -51,8 +51,7 @@ class BidsConfiguration(object):
             # properties=
         )
 
-    def apply_rule(self, rule_dir: str, rule: str,
-                   overwrite: bool = False):
+    def register_rule(self, rule_dir: str, rule: str):
         """Register datalad hirni rule"""
 
         rule_file = Path(rule_dir, rule)
@@ -61,21 +60,11 @@ class BidsConfiguration(object):
         # cases
         # 1. no rule defined -> add rule, clear studyspec, copy tmp_rule
         # 2. rule definied + same rule file -> clear studyspec, copy tmp_rule
-        # 3. rule definied + different rule file:
-        #   3.1 overwrite: overwrite rule, clear studyspec, copy tmp_rule
-        #   3.2 no overwrite: do nothing
+        # 3. rule definied + different rule file
+        #       -> overwrite rule, clear studyspec, copy tmp_rule
 
-        if not config.has_option("datalad.hirni.dicom2spec", "rules"):
-            set_rule = True
-        elif config.get("datalad.hirni.dicom2spec.rules") == rule_file:
-            set_rule = False
-        elif overwrite:
-            set_rule = True
-        else:
-            self.log.error("Already registered rule detected.")
-            return
-
-        if set_rule:
+        if (not config.has_option("datalad.hirni.dicom2spec", "rules")
+                or config.get("datalad.hirni.dicom2spec.rules") != rule_file):
             config.set("datalad.hirni.dicom2spec.rules",
                        rule_file, where='dataset')
 
@@ -280,10 +269,9 @@ def configure_bids_conversion():
             setup.run()
             conv.import_data(tarball=answer["data_path"])
         elif mode == choices["register_rule"]:
-            conv.apply_rule(
+            conv.register_rule(
                 rule_dir=Path("code", "costum_rules"),
-                rule="custom_rules.py",
-                overwrite=True
+                rule="custom_rules.py"
             )
         elif mode == choices["preview"]:
             conv.generate_preview()
