@@ -18,19 +18,20 @@ class BidsConfiguration(object):
     def __init__(self, dataset_path: str or Path):
         self.dataset_path = Path(dataset_path)
 
-        # in case something goes wrong
-        self.mark_dataset_to_be_removed = False
         self.log = utils.get_logger(__class__)
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
 
         self.acqid = "bids_rule_config"
+        self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
+        # hirni will remove underscores form the anon_subject entry
+        # e.g. bids_config -> bidsconfig
+        self.anon_subject = "bidsconfig"
 
-    def import_data(self, anon_subject: str, tarball: str):
+    def import_data(self, tarball: str):
         """ Import tarball as subdataset
 
         Args:
-            anon_subject: anonymize subject identifier
             tarball: path to tarball to import
         """
 
@@ -38,12 +39,12 @@ class BidsConfiguration(object):
         #   ../../original/sourcedata.tar.gz sourcedata
 
         self.log.info("Import %s as anon-subject %s and aquisition %s",
-                      tarball, anon_subject, self.acqid)
+                      tarball, self.anon_subject, self.acqid)
 
         # creates a subdataset <acqid> under sourcedata/dicoms
         datalad.hirni_import_dcm(
             dataset=self.dataset,
-            anon_subject=anon_subject,
+            anon_subject=self.anon_subject,
             # subject=
             path=tarball,
             acqid=self.acqid,
@@ -175,12 +176,6 @@ def ask_questions():
 
         },
         {
-            "type": "text",
-            "name": "anon_subject",
-            "message": "Define anon_subject:",
-            "when": lambda x: x["step_select"] == "Import data",
-        },
-        {
             "type": "path",
             "name": "data_path",
             "message": "Path to the data tar ball:",
@@ -204,11 +199,8 @@ def configure_bids_conversion():
         conv = BidsConfiguration(setup.dataset_path)
         if mode == "Import data":
             setup.run()
-            conv.import_data(
-                anon_subject=answer["anon_subject"],
-                tarball=answer["data_path"],
-            )
-        elif mode == "Configure and apply rule":
+            conv.import_data(tarball=answer["data_path"])
+        elif mode == "Configure and register rule":
             conv.apply_rule(
                 rule_dir=Path("code", "costum_rules"),
                 rule="custom_rules.py",
