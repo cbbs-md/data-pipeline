@@ -51,11 +51,6 @@ class BidsConfiguration(object):
             # properties=
         )
 
-        self.log.info("Structure of imported data:")
-        data_path = Path(self.dataset_path, self.acqid, "dicoms", "sourcedata",
-                         str(anon_subject))
-        utils.run_cmd(["tree", "-L", "1", data_path], self.log)
-
     def apply_rule(self, rule_dir: str, rule: str,
                    overwrite: bool = False):
         """Register datalad hirni rule"""
@@ -151,6 +146,40 @@ class BidsConfiguration(object):
             anonymize=True,
             # only_type=
         )
+
+        # imported data
+        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
+                            "sourcedata")
+        src_tree = utils.run_cmd(["tree", "-d", src_data_dir], self.log)
+
+        # converted data
+        bids_tree = utils.run_cmd_piped(
+           [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
+        )
+
+        # Generate nice output
+        src_tree = src_tree.split("\n")
+        src_tree[0] = "source:"
+        bids_tree = bids_tree.split("\n")
+        bids_tree[0] = "result:"
+
+        self.log.info("Preview:\n %s",
+                      self._put_side_by_side(src_tree, bids_tree))
+
+    @staticmethod
+    def _put_side_by_side(left: list, right: list) -> str:
+
+        col_width = max(len(line) for line in left) + 2  # padding
+
+        max_len = max(len(left), len(right))
+        left.extend([""] * (max_len - len(left)))
+        right.extend([""] * (max_len - len(right)))
+
+        result = ""
+        for row in zip(left, right):
+            result += "".join(word.ljust(col_width) for word in row) + "\n"
+
+        return result
 
     def _create_studyspec(self, spec):
 

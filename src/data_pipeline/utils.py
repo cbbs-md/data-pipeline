@@ -151,8 +151,8 @@ def get_logger(my_class, postfix=None) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def run_cmd(cmd: list, log: logging.Logger, error_message: str = None):
-    """ Runs a command via subprocess and logs output properly
+def run_cmd(cmd: list, log: logging.Logger, error_message: str = None) -> str:
+    """ Runs a command via subprocess and returns the output
 
     Args:
         cmd: A list of strings definied as for subpocess.run method
@@ -162,7 +162,7 @@ def run_cmd(cmd: list, log: logging.Logger, error_message: str = None):
 
     try:
         # pylint: disable=subprocess-run-check
-        output = subprocess.run(cmd, capture_output=True)
+        proc = subprocess.run(cmd, capture_output=True)
     except Exception:
         if error_message:
             log.error(error_message)
@@ -171,18 +171,68 @@ def run_cmd(cmd: list, log: logging.Logger, error_message: str = None):
                       exc_info=True)
         raise
 
-    if output.stdout:
-        log.info(output.stdout.decode("utf-8"))
-
     # capture return code explicitely instead of useing subprocess
     # parameter check=True to be able to log error message
-    if output.returncode:
+    if proc.returncode:
+        if proc.stdout:
+            log.info(proc.stdout.decode("utf-8"))
+
         log.debug("cmd: %s", " ".join(cmd))
         if error_message:
             log.error("%s, error was: %s", error_message,
-                      output.stderr.decode("utf-8"))
+                      proc.stderr.decode("utf-8"))
             raise Exception(error_message)
+
+        log.error("Command failed with error %s",
+                  proc.stderr.decode("utf-8"))
+        raise Exception()
+
+    return proc.stdout.decode("utf-8")
+
+
+def run_cmd_piped(cmds: list,
+                  log: logging.Logger,
+                  error_message: str = None) -> str:
+    """ Runs piped commands via subprocess and return the output
+
+    Args:
+        cmds: A list of commands, where a command is a list of strings definied
+              as for subpocess.run method
+        log: a logging logger
+        error_message: Message to user when an error occures
+    """
+
+    if not cmds:
+        return ""
+
+    proc = subprocess.Popen(cmds[0], stdout=subprocess.PIPE)
+    try:
+        # pylint: disable=subprocess-run-check
+        for cmd in cmds:
+            proc = subprocess.Popen(cmd, stdin=proc.stdout,
+                                    stdout=subprocess.PIPE)
+        output, errors = proc.communicate()
+    except Exception:
+        if error_message:
+            log.error(error_message)
         else:
-            log.error("Command failed with error %s",
-                      output.stderr.decode("utf-8"))
-            raise Exception()
+            log.error("Something went wrong when calling subprocess "
+                      "communicate", exc_info=True)
+        raise
+
+    # capture return code explicitely instead of useing subprocess
+    # parameter check=True to be able to log error message
+    if errors:
+        if output:
+            log.info(output.decode("utf-8"))
+
+        log.debug("cmds: %s", " ".join(cmds))
+        if error_message:
+            log.error("%s, error was: %s", error_message,
+                      errors.decode("utf-8"))
+            raise Exception(error_message)
+
+        log.error("Command failed with error %s", errors.decode("utf-8"))
+        raise Exception()
+
+    return output.decode("utf-8")
