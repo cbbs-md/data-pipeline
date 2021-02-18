@@ -215,8 +215,17 @@ class BidsConfiguration(object):
         return result
 
 
-def ask_questions():
+def ask_questions() -> (dict, dict):
     """ Define and ask the questionary for the user"""
+
+    choices = dict(
+        import_data="Import data",
+        register_rule="Configure and register rule",
+        add_procedures="Add procedure",
+        preview="Generate preview",
+        cleanup="Cleanup",
+    )
+
     questions = [
         {
             "type": "select",
@@ -224,12 +233,17 @@ def ask_questions():
             "message": "What do you want to do?",
             "choices": [
                 # Sets up a datalad dataset and prepares the convesion
-                "Import data",
+                choices["import_data"],
                 # Registers and applies datalad hirni rule
-                "Configure and register rule",
+                choices["register_rule"],
+                # Create, import or register procedures
+                choices["add_procedures"],
                 # Generates the BIDS converion
-                "Generate preview",
+                choices["preview"],
+                # Remove imported and converted
+                choices["cleanup"],
                 questionary.Separator(),
+                "Help",
                 "Exit"
             ],
             "use_shortcuts": True,
@@ -240,17 +254,17 @@ def ask_questions():
             "type": "path",
             "name": "data_path",
             "message": "Path to the data tar ball:",
-            "when": lambda x: x["step_select"] == "Import data",
+            "when": lambda x: x["step_select"] == choices["import_data"],
         },
     ]
-    return questionary.prompt(questions)
+    return questionary.prompt(questions), choices
 
 
 def configure_bids_conversion():
     """ Sets up a datalad dataset and prepares the convesion """
 
     while True:
-        answer = ask_questions()
+        answer, choices = ask_questions()
         if not answer or answer["step_select"] == "Exit":
             break
 
@@ -258,15 +272,15 @@ def configure_bids_conversion():
 
         setup = SetupDatalad()
         conv = BidsConfiguration(setup.dataset_path)
-        if mode == "Import data":
+        if mode == choices["import_data"]:
             setup.run()
             conv.import_data(tarball=answer["data_path"])
-        elif mode == "Configure and register rule":
+        elif mode == choices["register_rule"]:
             conv.apply_rule(
                 rule_dir=Path("code", "costum_rules"),
                 rule="custom_rules.py",
                 overwrite=True
             )
-        elif mode == "Generate preview":
+        elif mode == choices["preview"]:
             conv.generate_preview()
             # run procedures
