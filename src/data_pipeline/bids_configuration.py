@@ -183,7 +183,7 @@ def ask_questions():
                 # Sets up a datalad dataset and prepares the convesion
                 "Import data",
                 # Registers and applies datalad hirni rule
-                "Configure and apply rule",
+                "Configure and register rule",
                 # Generates the BIDS converion
                 "Generate preview",
                 questionary.Separator(),

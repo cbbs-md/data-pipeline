@@ -1,4 +1,4 @@
-
+""" The main executable to run the tool """
 import logging
 
 import click
@@ -47,13 +47,15 @@ def _setup_logging():
     # workaround for broken datalad logging
     # if not disabled it will flood the logs
     logging.getLogger("datalad").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
 @click.command()
 @click.option('--configure', is_flag=True,
               help="Prepares and configure the bids convesion")
 def main(configure):
-    #_setup_logging()
+    """ Execute data-pipeline """
+    _setup_logging()
 
     if configure:
         configure_bids_conversion()
