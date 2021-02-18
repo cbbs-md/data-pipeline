@@ -91,10 +91,22 @@ class BidsConfiguration(object):
         if not abs_rule_dir.exists():
             abs_rule_dir.mkdir(parents=True)
 
+        # copy rule_base
+        abs_rule_base_file = Path(self.dataset_path, rule_dir, "rules_base.py")
+        if not abs_rule_base_file.exists():
+            # TODO patch hirni and put rule_base inside of it
+            rule_base = Path(Path(__file__).parent.absolute(),
+                             "patches/rules_base.py")
+            shutil.copy(rule_base, abs_rule_base_file)
+
+        # copy rule template
         abs_rule_file = Path(self.dataset_path, rule_file)
         if not abs_rule_file.exists():
-            shutil.copy(Path("patches/custom_rules_template.py"),
-                        abs_rule_file)
+            template = Path(Path(__file__).parent.absolute(),
+                            "patches/custom_rules.py")
+#           TODO use correct template, this is only for dev
+#                           "patches/custom_rules_template.py")
+            shutil.copy(template, abs_rule_file)
         click.edit(filename=abs_rule_file)
 
         # TODO commit in dataset: changed .datalad.config, studyspec.json
