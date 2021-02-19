@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 import shutil
 
 import click
@@ -136,10 +137,24 @@ class BidsConfiguration(object):
         # open config file and read procedures
         pass
 
-    def activate_procedure(self):
+    def _get_active_procedures(self):
+        return []
+
+    def activate_procedures(self, procedures):
+
         # read procedures from config file
-        # check if contained already
-        # add and write back into config
+        active_procedures = self._get_active_procedures()
+
+        for proc in procedures:
+            # check if contained already
+            if proc in active_procedures:
+                self.log.info("Procedure %s is already active", proc)
+                continue
+
+            # add and write back into config
+            # what is with additional procedure parameters?
+
+    def deactivate_procedures(self, procedures):
         pass
 
     def generate_preview(self):
@@ -229,7 +244,7 @@ class ProcedureHandling(object):
 
         self.log = utils.get_logger(__class__)
 
-    def show_available_procedure(self):
+    def get_available_procedures(self):
         """ Show all procedures known to datalad """
 
         # self.log.info("Available procedures are:")
@@ -240,7 +255,26 @@ class ProcedureHandling(object):
         with utils.ChangeWorkingDir(self.dataset_path):
             output = utils.run_cmd(["datalad", "run-procedure", "--discover"],
                                    self.log)
-            self.log.info("Available procedures are:\n %s", output)
+#            self.log.info("Available procedures are:\n %s", output)
+
+            regex = r"(?P<name>.+?) \((?P<path>.+?)\) \[(?P<type>.+?)\]"
+            procs = {}
+            for proc in output.strip().split("\n"):
+                proc_name, proc_path, proc_type = proc.split(" ")
+
+                # an entry look like this:
+                # 'cfg_bids (<path/to/procedure>/cfg_bids.py) [python_script]'
+                match = re.fullmatch(regex, proc)
+                if match:
+                    procedure = match.groupdict()
+                    procs[procedure["name"]] = {
+                        "path": procedure["path"],
+                        "type": procedure["type"]
+                    }
+
+        # od = collections.OrderedDict(sorted(procs.items()))
+
+        return procs
 
     def create_procedure(self, procedure_type: str, procedure_name: str):
 
@@ -514,8 +548,12 @@ def configure_bids_conversion():
 
             elif answers["procedure_select"] == choices["proc_activate"]:
                 # get procedure name: select from all available procedures
-                # use checkbox for this?
-                conv.activate_procedure()
+                available = proc_handler.get_available_procedures()
+                chosen_procs = questionary.checkbox(
+                    "Select a procedure to activate",
+                    choices=sorted([key for key in available])
+                ).ask() or []
+                conv.activate_procedures(chosen_procs)
 
         elif mode == choices["preview"]:
             conv.generate_preview()
