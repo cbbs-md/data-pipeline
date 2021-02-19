@@ -268,4 +268,3 @@ def show_side_by_side(left: list, right: list) -> str:
         result += "".join(word.ljust(col_width) for word in row) + "\n"
 
     return result
-

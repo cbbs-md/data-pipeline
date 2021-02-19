@@ -54,6 +54,7 @@ class BidsConfiguration(object):
     def register_rule(self):
         """Register datalad hirni rule"""
 
+        # TODO get these from config
         rule_dir = Path("code", "costum_rules")
         rule = "custom_rules.py"
 
@@ -61,19 +62,20 @@ class BidsConfiguration(object):
 
         config = self.dataset.config
         # cases
-        # 1. no rule defined -> add rule, clear studyspec, copy tmp_rule
-        # 2. rule definied + same rule file -> clear studyspec, copy tmp_rule
+        # 1. no rule defined -> add rule, clear studyspec, copy rule template
+        # 2. rule definied + same rule file
+        #   -> clear studyspec, copy rule template
         # 3. rule definied + different rule file
-        #       -> overwrite rule, clear studyspec, copy tmp_rule
+        #   -> overwrite rule, clear studyspec, copy rule template
 
         if (not config.has_option("datalad.hirni.dicom2spec", "rules")
                 or config.get("datalad.hirni.dicom2spec.rules") != rule_file):
             config.set("datalad.hirni.dicom2spec.rules",
-                       rule_file, where='dataset')
+                       rule_file, where="dataset")
 
         self._reset_studyspec()
 
-        # generate costume rule dir
+        # create costume rule dir
         abs_rule_dir = Path(self.dataset_path, rule_dir)
         if not abs_rule_dir.exists():
             abs_rule_dir.mkdir(parents=True)
@@ -101,6 +103,11 @@ class BidsConfiguration(object):
         click.edit(filename=abs_rule_file)
 
         # TODO commit in dataset: changed .datalad.config, studyspec.json
+        # ds.save(
+        #   dataset=self.dataset, path=...,
+        #   message="Register and add custom rules to dataset configuration"
+        #   to_git=True (?)
+        # )
 
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
@@ -138,23 +145,94 @@ class BidsConfiguration(object):
                                    self.log)
             self.log.info("Available procedures are:\n %s", output)
 
-    def create_procedure(self, procedure_type: str):
+    def create_procedure(self, procedure_type: str, procedure_name: str):
+
+        # TODO get this from config
+        proc_dir = Path("code", "procedures")
+
+        proc_file = Path(proc_dir, procedure_name)
+
+        # determine it from proc_type and template
+        if procedure_type == "python":
+            procedure_name += ".py"
+            procedure_template = "templates/procedure_template.py"
+        elif procedure_type == "shell":
+            procedure_name += ".sh"
+            procedure_template = "templates/procedure_template.sh"
+        else:
+            self.log.error("Procedure %s type is not supported",
+                           procedure_type)
+            raise Exception("Not supported")
+
         # create procedure dir
+        abs_proc_dir = Path(self.dataset_path, proc_dir)
+        if not abs_proc_dir.exists():
+            abs_proc_dir.mkdir(parents=True)
+
         # register procedure dir in datalad
+        # cases
+        # 1. no procedure defined -> add proc, copy proc template
+        # 2. proc definied + same proc dir -> copy proc template
+        # 3. proc definied + different proc dir
+        #       -> add proc dir, copy proc template
+        self._register_proc_dir(proc_dir)
+
         # copy template
-        # open in editor
-        pass
+        target = Path(self.dataset_path, proc_file)
+        if not target.exists():
+            source = Path(Path(__file__).parent.absolute(), procedure_template)
+            shutil.copy(source, target)
 
-    def import_procedure(self, procedure_path):
-        # needs path from where to import file
+        # edit procedure template
+        self.log.info("Opening %s", target)
+        click.edit(filename=target)
+
+    def _register_proc_dir(self, proc_dir: str):
+        """ Register procedure dir in datalad
+
+        Args:
+            proc_dir: The directory to register
+        """
+        section = "datalad.locations"
+        option = "dataset-procedures"
+
+        config = self.dataset.config
+        if (not config.has_option(section, option)
+                or config.get(section + "." + option) != proc_dir):
+            config.set(section + "." + option, proc_dir, where="dataset")
+
+    def import_procedure(self, procedure_path: str):
+
+        # TODO get this from config
+        proc_dir = Path("code", "procedures")
+
         # create procedure dir
-        # register procedure dir in datalad
-        # copy file into procedure dir
-        pass
+        abs_proc_dir = Path(self.dataset_path, proc_dir)
+        if not abs_proc_dir.exists():
+            abs_proc_dir.mkdir(parents=True)
 
-    def register_procedure(self, procedure_dir):
+        # register procedure dir in datalad
+        self._register_proc_dir(proc_dir)
+
+        # copy file into procedure dir
+        proc_name = Path(procedure_path).name
+        target = Path(self.dataset_path, proc_dir, proc_name)
+        if target.exists():
+            self.log.error("Procedure with the name %s alread exists",
+                           proc_name)
+            raise Exception("Procedure already exists")
+
+        shutil.copy(procedure_path, target)
+
+    def register_procedure(self, procedure_dir: str):
+
+        # check if additional procedure_dir exists
+        procedure_dir = Path(procedure_dir)
+        if not procedure_dir.exists():
+            procedure_dir.mkdir(parents=True)
+
         # register additional procedure dir in datalad
-        pass
+        self._register_proc_dir(procedure_dir)
 
     def activate_procedure(self):
         # read procedures from config file
@@ -290,8 +368,6 @@ def ask_questions() -> (dict, dict):
             "name": "data_path",
             "message": "Path to the data tar ball:",
             "when": lambda x: x["step_select"] == choices["import_data"],
-            # for developing purpose only # TODO do not forget to remove
-            "default": "/home/nela/projects/Antonias_data/original/sourcedata_reduced.tar.xz"
         },
         {
             "type": "select",
@@ -313,7 +389,7 @@ def ask_questions() -> (dict, dict):
         },
         {
             "type": "select",
-            "name": "proc_type",
+            "name": "procedure_type",
             "message": "What type of procedure do you want to create?",
             "when": (lambda x: x["step_select"] == choices["add_procedure"]
                      and x["procedure_select"] == choices["proc_create"]),
@@ -327,13 +403,18 @@ def ask_questions() -> (dict, dict):
             "default": "Return",
         },
         {
+            "type": "text",
+            "name": "procedure_name",
+            "message": "How should the procedure be called?",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_create"]),
+        },
+        {
             "type": "path",
             "name": "procedure_file",
             "message": "Path to the procedure:",
             "when": (lambda x: x["step_select"] == choices["add_procedure"]
                      and x["procedure_select"] == choices["proc_import"]),
-            # for developing purpose only # TODO do not forget to remove
-            # "default": ("/home/nela/projects/Antonias_data/try_hirni/bids_with_rules_auto_mod/code/procedures/get_event_files.sh")
         },
         {
             "type": "path",
@@ -372,13 +453,15 @@ def configure_bids_conversion():
             elif answers["procedure_select"] == choices["proc_show"]:
                 conv.show_available_procedure()
             elif answers["procedure_select"] == choices["proc_create"]:
-                conv.create_procedure(answers["proc_type"])
+                conv.create_procedure(answers["procedure_type"],
+                                      answers["procedure_name"])
             elif answers["procedure_select"] == choices["proc_import"]:
                 conv.import_procedure(answers["procedure_file"])
             elif answers["procedure_select"] == choices["proc_register"]:
                 conv.register_procedure(answers["procedure_dir"])
             elif answers["procedure_select"] == choices["proc_activate"]:
                 # get procedure name: select from all available procedures
+                # use checkbox for this?
                 conv.activate_procedure()
 
         elif mode == choices["preview"]:

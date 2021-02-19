@@ -53,7 +53,7 @@ def _setup_logging():
 
 
 @click.command()
-@click.option('--configure', is_flag=True,
+@click.option("--configure", is_flag=True,
               help="Prepares and configure the bids convesion")
 def main(configure):
     """ Execute data-pipeline """
