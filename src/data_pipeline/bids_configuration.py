@@ -92,7 +92,7 @@ class BidsConfiguration(object):
             target = Path(self.dataset_path, rule_dir, src_name)
             if not target.exists():
                 source = Path(Path(__file__).parent.absolute(),
-                              "patches", target_name)
+                              "templates", target_name)
                 shutil.copy(source, target)
 
         # edit rule template
