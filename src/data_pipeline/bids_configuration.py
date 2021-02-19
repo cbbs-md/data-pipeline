@@ -51,8 +51,11 @@ class BidsConfiguration(object):
             # properties=
         )
 
-    def register_rule(self, rule_dir: str, rule: str):
+    def register_rule(self):
         """Register datalad hirni rule"""
+
+        rule_dir = Path("code", "costum_rules")
+        rule = "custom_rules.py"
 
         rule_file = Path(rule_dir, rule)
 
@@ -81,7 +84,7 @@ class BidsConfiguration(object):
             ("rules_base.py", "rules_base.py"),
             ("custom_rules.py", rule),
             # TODO use correct template, this is only for dev
-#            ("custom_rule_template.py", rule),
+            # ("custom_rule_template.py", rule),
         ]
 
         # TODO patch hirni and put rule_base inside of it
@@ -254,10 +257,8 @@ def configure_bids_conversion():
             setup.run()
             conv.import_data(tarball=answer["data_path"])
         elif mode == choices["register_rule"]:
-            conv.register_rule(
-                rule_dir=Path("code", "costum_rules"),
-                rule="custom_rules.py"
-            )
+            conv.register_rule()
+
         elif mode == choices["preview"]:
             conv.generate_preview()
             # run procedures
