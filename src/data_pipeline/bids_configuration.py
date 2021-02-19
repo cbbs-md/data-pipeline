@@ -132,6 +132,99 @@ class BidsConfiguration(object):
         # open config file and read procedures
         pass
 
+    def activate_procedure(self):
+        # read procedures from config file
+        # check if contained already
+        # add and write back into config
+        pass
+
+    def generate_preview(self):
+        """ Generade bids converion """
+
+        spec = self.spec_file.relative_to(self.dataset_path)
+        self._create_studyspec(spec)
+
+        # Clean up old bids convertion
+        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
+        if bids_dir.exists():
+            self.log.info("Target directory %s for bids conversion already "
+                          "exists. Remove and reuse it.", bids_dir)
+
+            shutil.rmtree(bids_dir)
+
+        self.log.info("Convert to BIDS based on study specification")
+
+        # since logging can not be controlled when using the datalad api, the
+        # console output will be flooded -> sircument it by using the command
+        # line interface
+        with utils.ChangeWorkingDir(self.dataset_path):
+            utils.run_cmd(
+                [
+                    "datalad",
+                    "hirni-spec2bids",
+                    "--anonymize",
+                    spec
+                ],
+                self.log
+            )
+
+        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
+#        datalad.hirni_spec2bids(
+#            specfile=spec,
+#            dataset=self.dataset,
+#            anonymize=True,
+#            # only_type=
+#        )
+
+        # TODO run procedures
+
+        # imported data
+        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
+                            "sourcedata")
+        src_tree = utils.run_cmd(["tree", "-d", src_data_dir], self.log)
+
+        # converted data
+        bids_tree = utils.run_cmd_piped(
+           [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
+        )
+
+        # Generate nice output
+        src_tree = src_tree.split("\n")
+        src_tree[0] = "source:"
+        bids_tree = bids_tree.split("\n")
+        bids_tree[0] = "result:"
+
+        self.log.info("Preview:\n %s",
+                      utils.show_side_by_side(src_tree, bids_tree))
+
+    def _create_studyspec(self, spec):
+
+        self.log.info("Generate study specification file")
+
+        # Fix needed since dicom2spec only looks for rule file in current dir
+        # and not in dataset dir
+        with utils.ChangeWorkingDir(self.dataset_path):
+            # datalad hirni-dicom2spec -s bids_rule_config/studyspec.json \
+            #     bids_rule_config/dicoms
+            datalad.hirni_dicom2spec(
+                path=str(Path(self.acqid, "dicoms")),
+                spec=spec,
+                dataset=self.dataset,
+                # subject=
+                # anon_subject=
+                # acquisition=
+                # properties=
+            )
+
+
+class ProcedureHandling(object):
+
+    def __init__(self, dataset_path):
+        self.dataset_path = dataset_path
+        self.dataset = datalad.Dataset(self.dataset_path)
+
+        self.log = utils.get_logger(__class__)
+
     def show_available_procedure(self):
         """ Show all procedures known to datalad """
 
@@ -234,92 +327,8 @@ class BidsConfiguration(object):
         # register additional procedure dir in datalad
         self._register_proc_dir(procedure_dir)
 
-    def activate_procedure(self):
-        # read procedures from config file
-        # check if contained already
-        # add and write back into config
-        pass
 
-    def generate_preview(self):
-        """ Generade bids converion """
-
-        spec = self.spec_file.relative_to(self.dataset_path)
-        self._create_studyspec(spec)
-
-        # Clean up old bids convertion
-        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
-        if bids_dir.exists():
-            self.log.info("Target directory %s for bids conversion already "
-                          "exists. Remove and reuse it.", bids_dir)
-
-            shutil.rmtree(bids_dir)
-
-        self.log.info("Convert to BIDS based on study specification")
-
-        # since logging can not be controlled when using the datalad api, the
-        # console output will be flooded -> sircument it by using the command
-        # line interface
-        with utils.ChangeWorkingDir(self.dataset_path):
-            utils.run_cmd(
-                [
-                    "datalad",
-                    "hirni-spec2bids",
-                    "--anonymize",
-                    spec
-                ],
-                self.log
-            )
-
-        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
-#        datalad.hirni_spec2bids(
-#            specfile=spec,
-#            dataset=self.dataset,
-#            anonymize=True,
-#            # only_type=
-#        )
-
-        # TODO run procedures
-
-        # imported data
-        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
-                            "sourcedata")
-        src_tree = utils.run_cmd(["tree", "-d", src_data_dir], self.log)
-
-        # converted data
-        bids_tree = utils.run_cmd_piped(
-           [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
-        )
-
-        # Generate nice output
-        src_tree = src_tree.split("\n")
-        src_tree[0] = "source:"
-        bids_tree = bids_tree.split("\n")
-        bids_tree[0] = "result:"
-
-        self.log.info("Preview:\n %s",
-                      utils.show_side_by_side(src_tree, bids_tree))
-
-    def _create_studyspec(self, spec):
-
-        self.log.info("Generate study specification file")
-
-        # Fix needed since dicom2spec only looks for rule file in current dir
-        # and not in dataset dir
-        with utils.ChangeWorkingDir(self.dataset_path):
-            # datalad hirni-dicom2spec -s bids_rule_config/studyspec.json \
-            #     bids_rule_config/dicoms
-            datalad.hirni_dicom2spec(
-                path=str(Path(self.acqid, "dicoms")),
-                spec=spec,
-                dataset=self.dataset,
-                # subject=
-                # anon_subject=
-                # acquisition=
-                # properties=
-            )
-
-
-def ask_questions() -> (dict, dict):
+def _ask_questions() -> (dict, dict):
     """ Define and ask the questionary for the user"""
 
     choices = dict(
@@ -431,7 +440,7 @@ def configure_bids_conversion():
     """ Sets up a datalad dataset and prepares the convesion """
 
     while True:
-        answers, choices = ask_questions()
+        answers, choices = _ask_questions()
         if not answers or answers["step_select"] == "Exit":
             break
 
@@ -448,17 +457,18 @@ def configure_bids_conversion():
             conv.register_rule()
 
         elif mode == choices["add_procedure"]:
+            proc_handler = ProcedureHandling(setup.dataset_path)
             if answers["procedure_select"] == choices["proc_active"]:
                 conv.show_active_procedure()
             elif answers["procedure_select"] == choices["proc_show"]:
-                conv.show_available_procedure()
+                proc_handler.show_available_procedure()
             elif answers["procedure_select"] == choices["proc_create"]:
-                conv.create_procedure(answers["procedure_type"],
-                                      answers["procedure_name"])
+                proc_handler.create_procedure(answers["procedure_type"],
+                                              answers["procedure_name"])
             elif answers["procedure_select"] == choices["proc_import"]:
-                conv.import_procedure(answers["procedure_file"])
+                proc_handler.import_procedure(answers["procedure_file"])
             elif answers["procedure_select"] == choices["proc_register"]:
-                conv.register_procedure(answers["procedure_dir"])
+                proc_handler.register_procedure(answers["procedure_dir"])
             elif answers["procedure_select"] == choices["proc_activate"]:
                 # get procedure name: select from all available procedures
                 # use checkbox for this?
