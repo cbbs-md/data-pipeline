@@ -8,6 +8,8 @@ from data_pipeline.bids_configuration import configure_bids_conversion
 
 def _setup_logging():
 
+    log_level = "INFO"
+
     logging.config.dictConfig({
         "version": 1,
         "disable_existing_loggers": False,
@@ -22,13 +24,13 @@ def _setup_logging():
         },
         "handlers": {
             "console": {
-                "level": "INFO",
+                "level": log_level,
                 "class": "logging.StreamHandler",
                 "formatter": "simple"
             },
             "file": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "level": "INFO",
+                "level": log_level,
                 "formatter": "precise",
                 "filename": "data_pipeline.log",
                 "maxBytes": 10485760,
@@ -38,7 +40,7 @@ def _setup_logging():
         "loggers": {
             "": {
                 "handlers": ["console", "file"],
-                "level": "INFO",
+                "level": log_level,
                 "propagate": True
             }
         }
