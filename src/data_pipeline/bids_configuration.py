@@ -12,6 +12,10 @@ from data_pipeline.setup_datalad import SetupDatalad
 import data_pipeline.utils as utils
 
 
+class NotPossible(Exception):
+    pass
+
+
 class BidsConfiguration(object):
     """ Enables configuration of rules to for bids convertions """
 
@@ -253,9 +257,8 @@ class ProcedureHandling(object):
             procedure_name += ".sh"
             procedure_template = "templates/procedure_template.sh"
         else:
-            self.log.error("Procedure %s type is not supported",
-                           procedure_type)
-            raise Exception("Not supported")
+            self.log.exception("Procedure %s type is not supported",
+                               procedure_type)
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
@@ -263,11 +266,6 @@ class ProcedureHandling(object):
             abs_proc_dir.mkdir(parents=True)
 
         # register procedure dir in datalad
-        # cases
-        # 1. no procedure defined -> add proc, copy proc template
-        # 2. proc definied + same proc dir -> copy proc template
-        # 3. proc definied + different proc dir
-        #       -> add proc dir, copy proc template
         self._register_proc_dir(proc_dir)
 
         # copy template
@@ -280,21 +278,39 @@ class ProcedureHandling(object):
         self.log.info("Opening %s", target)
         click.edit(filename=target)
 
-    def _register_proc_dir(self, proc_dir: str):
+    def _register_proc_dir(self, proc_dir: str, overwrite: bool = False):
         """ Register procedure dir in datalad
 
         Args:
             proc_dir: The directory to register
+            overwrite: If the procedure dir entry in the datalad config should
+                       be overwritten in case an already register directory
+                       differs from proc_dir
         """
+
         section = "datalad.locations"
         option = "dataset-procedures"
 
         config = self.dataset.config
-        if (not config.has_option(section, option)
-                or config.get(section + "." + option) != proc_dir):
-            config.set(section + "." + option, proc_dir, where="dataset")
+        # cases
+        # 1. no procedure defined -> add proc
+        # 2. proc definied + same proc dir -> do nothing
+        # 3. proc definied + different proc dir -> add proc dir
 
-    def import_procedure(self, procedure_path: str):
+        if config.has_option(section, option):
+            # convert to Path to handle writespaces et. all
+            registered_dir = Path(config.get(section + "." + option))
+            if registered_dir == Path(proc_dir):
+                # nothing to do
+                return
+            elif not overwrite:
+                msg = "Different procedure dir %s already registered."
+                self.log.error(msg, registered_dir)
+                raise NotPossible(msg, "")
+
+        config.set(section + "." + option, proc_dir, where="dataset")
+
+    def import_procedure(self, procedure_path: str, procedure_file_name):
 
         # TODO get this from config
         proc_dir = Path("code", "procedures")
@@ -305,27 +321,33 @@ class ProcedureHandling(object):
             abs_proc_dir.mkdir(parents=True)
 
         # register procedure dir in datalad
-        self._register_proc_dir(proc_dir)
+        try:
+            self._register_proc_dir(proc_dir)
+        except NotPossible:
+            self.log.error("Import of procedure not possible since default "
+                           "procedure dir could not be registered")
+            return
 
         # copy file into procedure dir
-        proc_name = Path(procedure_path).name
-        target = Path(self.dataset_path, proc_dir, proc_name)
+        proc_type = Path(procedure_path).suffix
+        target = Path(self.dataset_path, proc_dir, procedure_file_name)
+        target = target.with_suffix(proc_type)
         if target.exists():
-            self.log.error("Procedure with the name %s alread exists",
-                           proc_name)
-            raise Exception("Procedure already exists")
+            self.log.exception("Procedure with the name %s alread exists",
+                               procedure_file_name)
+            return
 
         shutil.copy(procedure_path, target)
 
-    def register_procedure(self, procedure_dir: str):
+    def register_procedure_dir(self, procedure_dir: str,
+                               overwrite: bool = False):
 
         # check if additional procedure_dir exists
-        procedure_dir = Path(procedure_dir)
-        if not procedure_dir.exists():
-            procedure_dir.mkdir(parents=True)
+        if not Path(procedure_dir).exists():
+            self.log.error("Procedure dir %s, does not exist", procedure_dir)
 
         # register additional procedure dir in datalad
-        self._register_proc_dir(procedure_dir)
+        self._register_proc_dir(procedure_dir, overwrite)
 
 
 def _ask_questions() -> (dict, dict):
@@ -340,7 +362,6 @@ def _ask_questions() -> (dict, dict):
         cleanup="Cleanup",
 
         proc_active="Show active procedures",
-        proc_show="Show available procedures",
         proc_create="Create new procedure",
         proc_import="Import procedure",
         proc_register="Register additional procedure location",
@@ -385,7 +406,6 @@ def _ask_questions() -> (dict, dict):
             "when": lambda x: x["step_select"] == choices["add_procedure"],
             "choices": [
                 choices["proc_active"],
-                choices["proc_show"],
                 choices["proc_create"],
                 choices["proc_import"],
                 choices["proc_register"],
@@ -426,11 +446,21 @@ def _ask_questions() -> (dict, dict):
                      and x["procedure_select"] == choices["proc_import"]),
         },
         {
+            "type": "text",
+            "name": "procedure_file_name",
+            "message": "Name of the procedure:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_import"]
+                     and x["procedure_file"]),
+            "default": lambda x: Path(x["procedure_file"]).stem
+        },
+        {
             "type": "path",
             "name": "procedure_dir",
-            "message": "Path to the procedure:",
+            "message": "Path to the procedures:",
             "when": (lambda x: x["step_select"] == choices["add_procedure"]
                      and x["procedure_select"] == choices["proc_register"]),
+            "only_directories": True,
         },
     ]
     return questionary.prompt(questions), choices
@@ -458,17 +488,30 @@ def configure_bids_conversion():
 
         elif mode == choices["add_procedure"]:
             proc_handler = ProcedureHandling(setup.dataset_path)
+
             if answers["procedure_select"] == choices["proc_active"]:
                 conv.show_active_procedure()
-            elif answers["procedure_select"] == choices["proc_show"]:
-                proc_handler.show_available_procedure()
+
             elif answers["procedure_select"] == choices["proc_create"]:
                 proc_handler.create_procedure(answers["procedure_type"],
                                               answers["procedure_name"])
+
             elif answers["procedure_select"] == choices["proc_import"]:
-                proc_handler.import_procedure(answers["procedure_file"])
+                proc_handler.import_procedure(answers["procedure_file"],
+                                              answers["procedure_file_name"])
+
             elif answers["procedure_select"] == choices["proc_register"]:
-                proc_handler.register_procedure(answers["procedure_dir"])
+                try:
+                    proc_handler.register_procedure_dir(
+                        answers["procedure_dir"]
+                    )
+                except NotPossible:
+                    if questionary.confirm("Overwrite?").ask():
+                        proc_handler.register_procedure_dir(
+                            answers["procedure_dir"],
+                            overwrite=True
+                        )
+
             elif answers["procedure_select"] == choices["proc_activate"]:
                 # get procedure name: select from all available procedures
                 # use checkbox for this?
