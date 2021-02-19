@@ -119,6 +119,49 @@ class BidsConfiguration(object):
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
+    def show_active_procedure(self):
+        """ Show all procedures registered to be executed in the conversion """
+
+        # open config file and read procedures
+        pass
+
+    def show_available_procedure(self):
+        """ Show all procedures known to datalad """
+
+        # self.log.info("Available procedures are:")
+        # datalad.run_procedure(dataset=self.dataset, discover=True)
+
+        # run the command instead of the api to have more control about the
+        # output, same reason as in generate_preview
+        with utils.ChangeWorkingDir(self.dataset_path):
+            output = utils.run_cmd(["datalad", "run-procedure", "--discover"],
+                                   self.log)
+            self.log.info("Available procedures are:\n %s", output)
+
+    def create_procedure(self, procedure_type: str):
+        # create procedure dir
+        # register procedure dir in datalad
+        # copy template
+        # open in editor
+        pass
+
+    def import_procedure(self, procedure_path):
+        # needs path from where to import file
+        # create procedure dir
+        # register procedure dir in datalad
+        # copy file into procedure dir
+        pass
+
+    def register_procedure(self, procedure_dir):
+        # register additional procedure dir in datalad
+        pass
+
+    def activate_procedure(self):
+        # read procedures from config file
+        # check if contained already
+        # add and write back into config
+        pass
+
     def generate_preview(self):
         """ Generade bids converion """
 
@@ -156,6 +199,8 @@ class BidsConfiguration(object):
 #            anonymize=True,
 #            # only_type=
 #        )
+
+        # TODO run procedures
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
@@ -202,9 +247,17 @@ def ask_questions() -> (dict, dict):
     choices = dict(
         import_data="Import data",
         register_rule="Configure and register rule",
-        add_procedures="Add procedure",
+        add_procedure="Add procedure",
         preview="Generate preview",
+        check="Check for BIDS conformity",
         cleanup="Cleanup",
+
+        proc_active="Show active procedures",
+        proc_show="Show available procedures",
+        proc_create="Create new procedure",
+        proc_import="Import procedure",
+        proc_register="Register additional procedure location",
+        proc_activate="Activate procedure",
     )
 
     questions = [
@@ -218,9 +271,10 @@ def ask_questions() -> (dict, dict):
                 # Registers and applies datalad hirni rule
                 choices["register_rule"],
                 # Create, import or register procedures
-                choices["add_procedures"],
+                choices["add_procedure"],
                 # Generates the BIDS converion
                 choices["preview"],
+                choices["check"],
                 # Remove imported and converted
                 choices["cleanup"],
                 questionary.Separator(),
@@ -236,6 +290,57 @@ def ask_questions() -> (dict, dict):
             "name": "data_path",
             "message": "Path to the data tar ball:",
             "when": lambda x: x["step_select"] == choices["import_data"],
+            # for developing purpose only # TODO do not forget to remove
+            "default": "/home/nela/projects/Antonias_data/original/sourcedata_reduced.tar.xz"
+        },
+        {
+            "type": "select",
+            "name": "procedure_select",
+            "message": "What do you want to do?",
+            "when": lambda x: x["step_select"] == choices["add_procedure"],
+            "choices": [
+                choices["proc_active"],
+                choices["proc_show"],
+                choices["proc_create"],
+                choices["proc_import"],
+                choices["proc_register"],
+                choices["proc_activate"],
+                questionary.Separator(),
+                "Return",
+            ],
+            "use_shortcuts": True,
+            "default": "Return",
+        },
+        {
+            "type": "select",
+            "name": "proc_type",
+            "message": "What type of procedure do you want to create?",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_create"]),
+            "choices": [
+                "shell",
+                "python",
+                questionary.Separator(),
+                "Return",
+            ],
+            "use_shortcuts": True,
+            "default": "Return",
+        },
+        {
+            "type": "path",
+            "name": "procedure_file",
+            "message": "Path to the procedure:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_import"]),
+            # for developing purpose only # TODO do not forget to remove
+            # "default": ("/home/nela/projects/Antonias_data/try_hirni/bids_with_rules_auto_mod/code/procedures/get_event_files.sh")
+        },
+        {
+            "type": "path",
+            "name": "procedure_dir",
+            "message": "Path to the procedure:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_register"]),
         },
     ]
     return questionary.prompt(questions), choices
@@ -245,20 +350,39 @@ def configure_bids_conversion():
     """ Sets up a datalad dataset and prepares the convesion """
 
     while True:
-        answer, choices = ask_questions()
-        if not answer or answer["step_select"] == "Exit":
+        answers, choices = ask_questions()
+        if not answers or answers["step_select"] == "Exit":
             break
 
-        mode = answer["step_select"]
+        mode = answers["step_select"]
 
         setup = SetupDatalad()
         conv = BidsConfiguration(setup.dataset_path)
+
         if mode == choices["import_data"]:
             setup.run()
-            conv.import_data(tarball=answer["data_path"])
+            conv.import_data(tarball=answers["data_path"])
+
         elif mode == choices["register_rule"]:
             conv.register_rule()
 
+        elif mode == choices["add_procedure"]:
+            if answers["procedure_select"] == choices["proc_active"]:
+                conv.show_active_procedure()
+            elif answers["procedure_select"] == choices["proc_show"]:
+                conv.show_available_procedure()
+            elif answers["procedure_select"] == choices["proc_create"]:
+                conv.create_procedure(answers["proc_type"])
+            elif answers["procedure_select"] == choices["proc_import"]:
+                conv.import_procedure(answers["procedure_file"])
+            elif answers["procedure_select"] == choices["proc_register"]:
+                conv.register_procedure(answers["procedure_dir"])
+            elif answers["procedure_select"] == choices["proc_activate"]:
+                # get procedure name: select from all available procedures
+                conv.activate_procedure()
+
         elif mode == choices["preview"]:
             conv.generate_preview()
-            # run procedures
+
+        elif mode == choices["check"]:
+            pass
