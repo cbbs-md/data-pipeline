@@ -3,10 +3,10 @@
 requires = ["setuptools >= 40.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.pylint.typecheck]
-# List of module names for which member attributes should not be checked
-ignored-modules = datalad
+#[tool.pylint.typecheck]
+## List of module names for which member attributes should not be checked
+#ignored-modules = datalad
 
-[tool.pylint.basic]
-# Good variable names which should always be accepted
-good-names=i,j,k,ex,Run,_,ip,f
+#[tool.pylint.basic]
+## Good variable names which should always be accepted
+#good-names=i,j,k,ex,Run,_,ip,f

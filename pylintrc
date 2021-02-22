@@ -1,0 +1,9 @@
+[TYPECHECK]
+
+# List of module names for which member attributes should not be checked
+ignored-modules = datalad
+
+[BASIC]
+
+# Good variable names which should always be accepted
+good-names=i,j,k,ex,Run,_,ip,f
