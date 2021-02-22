@@ -1,6 +1,7 @@
 """ The main executable to run the tool """
 import logging
 from pathlib import Path
+import shutil
 import sys
 
 import click
@@ -65,15 +66,23 @@ def main(setup, project, configure):
     """ Execute data-pipeline """
     _setup_logging()
 
+    project = Path(project)
+    config_filename = "config.yaml"
+
     if project:
         # check that project dir exists
-        if not Path(project).exists():
+        if not project.exists():
             logging.error("Project dir %s does not exist", project)
             sys.exit(1)
 
     if setup:
+        logging.info("Setting up data-pipeline in %s", project)
+
         # create a config file in the project dir
-        pass
+        source = Path(Path(__file__).parent.absolute(),
+                      "templates", "config_template.yaml")
+        target = Path(project, config_filename)
+        shutil.copy(source, target)
 
     if configure:
         configure_bids_conversion(project)

@@ -47,7 +47,6 @@ class BidsConfigHandling():
                         "rule_dir": {"type": "string"},
                         "rule_name": {"type": "string"},
                         "rule_template": {"type": "string"},
-                        "working_dir": {"type": "string"},
                     },
                     "required": [
                         "dataset_name",
@@ -57,7 +56,6 @@ class BidsConfigHandling():
                         "rule_dir",
                         "rule_name",
                         "rule_template",
-                        "working_dir"
                     ]
                 },
             },
