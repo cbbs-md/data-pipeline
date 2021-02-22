@@ -15,3 +15,9 @@ bids:
         # Either the full path to the patch or use {data_pipeline_path}
         # to refer to the current path of the data-pipeline source code
         - "{data_pipeline_path}/patches/hirni_heuristic.patch"
+    procedure_dir: code/procedures
+    procedure_python_template: templates/procedure_template.py
+    procedure_shell_template: templates/procedure_template.sh
+    rule_dir: code/costum_rules
+    rule_name: custom_rules.py
+    rule_template: templates/cutom_rule_template.py

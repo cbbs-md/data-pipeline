@@ -4,8 +4,10 @@ import json
 from pathlib import Path
 import re
 import shutil
+from typing import Tuple, Union
 
 import click
+import jsonschema
 import datalad.api as datalad
 import questionary
 
@@ -14,18 +16,108 @@ import data_pipeline.utils as utils
 
 
 class NotPossible(Exception):
-    pass
+    """ Raised when the requested action is not possible """
 
 
-class BidsConfiguration(object):
+class BidsConfigHandling():
+    """ Handle all configuration file access """
+
+    def __init__(self, config_file="config.yaml"):
+        self.config_file = config_file
+
+    def validate(self, config: dict):
+        """ Validate the configuration
+
+        Checks that the configuration containes all parameters requiered for
+        the bids configuration
+        """
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "bids": {
+                    "type": "object",
+                    "properties": {
+                        "active_procedures": {"type": "array"},
+                        "dataset_name": {"type": "string"},
+                        "patches": {"type": "array"},
+                        "procedure_dir": {"type": "string"},
+                        "procedure_python_template": {"type": "string"},
+                        "procedure_shell_template": {"type": "string"},
+                        "rule_dir": {"type": "string"},
+                        "rule_name": {"type": "string"},
+                        "rule_template": {"type": "string"},
+                        "working_dir": {"type": "string"},
+                    },
+                    "required": [
+                        "dataset_name",
+                        "procedure_dir",
+                        "procedure_python_template",
+                        "procedure_shell_template",
+                        "rule_dir",
+                        "rule_name",
+                        "rule_template",
+                        "working_dir"
+                    ]
+                },
+            },
+            "required": ["bids"]
+        }
+
+        jsonschema.validate(config, schema)
+        # TODO catch jsonschema.exceptions.ValidationError for proper logging
+
+    def read(self) -> dict:
+        """ Reads the configuration from the config file """
+        config = utils.get_config(filename=self.config_file)
+        self.validate(config)
+
+        return config["bids"]
+
+    def get_active_procedures(self) -> list:
+        """Get the active procedures.
+
+        Returns:
+            The procedure marked as active in the config file.
+        """
+        bids_config = self.read()
+
+        return bids_config.get("active_procedures", [])
+
+    def write_active_procedures(self, procedures: list):
+        """ Writes the active procedures into the config file.
+
+        Args:
+            procedures: The procedures to activate
+        """
+        config = utils.get_config(filename=self.config_file)
+        config["bids"]["active_procedures"] = procedures
+
+        self.write(config)
+
+    def write(self, config: dict):
+        """ Write a new configuration into the config file
+
+        Args:
+            config: The new configuration. This has to be match the defined
+                    schema.
+        """
+        self.validate(config)
+        utils.write_config(config, filename=self.config_file)
+
+
+class BidsConfiguration():
     """ Enables configuration of rules to for bids convertions """
 
-    def __init__(self, dataset_path: str or Path):
+    def __init__(self, dataset_path: Union[str, Path]):
         self.dataset_path = Path(dataset_path)
 
-        self.log = utils.get_logger(__class__)
+        self.log = utils.get_logger(__class__)  # type: ignore
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
+
+        self.confhandler = BidsConfigHandling()
+        self.config = self.confhandler.read()
 
         self.acqid = "bids_rule_config"
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
@@ -60,8 +152,9 @@ class BidsConfiguration(object):
         """Register datalad hirni rule"""
 
         # TODO get these from config
-        rule_dir = Path("code", "costum_rules")
-        rule = "custom_rules.py"
+        rule_dir = Path(self.config["rule_dir"])
+        rule = self.config["rule_name"]
+        rule_template = self.config["rule_template"]
 
         rule_file = Path(rule_dir, rule)
 
@@ -91,7 +184,7 @@ class BidsConfiguration(object):
             ("rules_base.py", "rules_base.py"),
             ("custom_rules.py", rule),
             # TODO use correct template, this is only for dev
-            # ("custom_rule_template.py", rule),
+            # (rule_template, rule),
         ]
 
         # TODO patch hirni and put rule_base inside of it
@@ -237,10 +330,14 @@ class BidsConfiguration(object):
 
 
 class ProcedureHandling(object):
+    """ Handles everything concerning procedures """
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
         self.dataset = datalad.Dataset(self.dataset_path)
+
+        self.confhandler = BidsConfigHandling()
+        self.config = self.confhandler.read()
 
         self.log = utils.get_logger(__class__)
 
@@ -277,19 +374,28 @@ class ProcedureHandling(object):
         return procs
 
     def create_procedure(self, procedure_type: str, procedure_name: str):
+        """ Create a new procedure from a template to be modified.
 
-        # TODO get this from config
-        proc_dir = Path("code", "procedures")
+        The default procedure dir is registered in datalad and depending of the
+        procedure type defined, a template is copied into it with the defined
+        name. Then the file is opened to be edited by the user.
 
+        Args:
+            procedure_type: what type of procedure to add
+                            (python or shell)
+            procedure_name: how the procedure should be called
+        """
+
+        proc_dir = self.config["procedure_dir"]
         proc_file = Path(proc_dir, procedure_name)
 
         # determine it from proc_type and template
         if procedure_type == "python":
             procedure_name += ".py"
-            procedure_template = "templates/procedure_template.py"
+            procedure_template = self.config["procedure_python_template"]
         elif procedure_type == "shell":
             procedure_name += ".sh"
-            procedure_template = "templates/procedure_template.sh"
+            procedure_template = self.config["procedure_shell_template"]
         else:
             self.log.exception("Procedure %s type is not supported",
                                procedure_type)
@@ -310,9 +416,10 @@ class ProcedureHandling(object):
 
         # edit procedure template
         self.log.info("Opening %s", target)
-        click.edit(filename=target)
+        click.edit(filename=str(target))
 
-    def _register_proc_dir(self, proc_dir: str, overwrite: bool = False):
+    def _register_proc_dir(self, proc_dir: Union[str, Path],
+                           overwrite: bool = False):
         """ Register procedure dir in datalad
 
         Args:
@@ -345,9 +452,14 @@ class ProcedureHandling(object):
         config.set(section + "." + option, proc_dir, where="dataset")
 
     def import_procedure(self, procedure_path: str, procedure_file_name):
+        """ Imports a file into the procedure dir
 
-        # TODO get this from config
-        proc_dir = Path("code", "procedures")
+        Args:
+            procedure_path: The file to be imported
+            procedure_file_name: The new name of the imported procedure
+        """
+
+        proc_dir = self.config["procedure_dir"]
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
