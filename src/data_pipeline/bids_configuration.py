@@ -41,7 +41,7 @@ class BidsConfigHandling():
                         "active_procedures": {"type": "array"},
                         "dataset_name": {"type": "string"},
                         "patches": {"type": "array"},
-                        "procedure_dir": {"type": "string"},
+                        "default_procedure_dir": {"type": "string"},
                         "procedure_python_template": {"type": "string"},
                         "procedure_shell_template": {"type": "string"},
                         "rule_dir": {"type": "string"},
@@ -51,7 +51,7 @@ class BidsConfigHandling():
                     },
                     "required": [
                         "dataset_name",
-                        "procedure_dir",
+                        "default_procedure_dir",
                         "procedure_python_template",
                         "procedure_shell_template",
                         "rule_dir",
@@ -355,7 +355,7 @@ class ProcedureHandling():
             procedure_name: how the procedure should be called
         """
 
-        proc_dir = self.config["procedure_dir"]
+        proc_dir = self.config["default_procedure_dir"]
         proc_file = Path(proc_dir, procedure_name)
 
         # determine it from proc_type and template
@@ -428,7 +428,7 @@ class ProcedureHandling():
             procedure_file_name: The new name of the imported procedure
         """
 
-        proc_dir = self.config["procedure_dir"]
+        proc_dir = self.config["default_procedure_dir"]
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
@@ -464,8 +464,10 @@ class ProcedureHandling():
                        registered, if it should be overwritten.
         """
 
-        # check if additional procedure_dir exists
-        if not Path(procedure_dir).exists():
+        # check if additional procedure_dir exist
+        # (also check for relative paths)
+        if (not Path(procedure_dir).exists()
+                and not Path(self.dataset_path, procedure_dir).exists()):
             self.log.warning("Procedure dir %s, does not exist", procedure_dir)
 
         # register additional procedure dir in datalad
@@ -658,6 +660,7 @@ def _ask_questions() -> Tuple[dict, dict]:
             "when": (lambda x: x["step_select"] == choices["add_procedure"]
                      and x["procedure_select"] == choices["proc_register"]),
             "only_directories": True,
+            "default": config["default_procedure_dir"]
         },
     ]
     return questionary.prompt(questions), choices
