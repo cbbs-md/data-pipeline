@@ -326,13 +326,10 @@ class ProcedureHandling():
         with utils.ChangeWorkingDir(self.dataset_path):
             output = utils.run_cmd(["datalad", "run-procedure", "--discover"],
                                    self.log)
-#            self.log.info("Available procedures are:\n %s", output)
 
             regex = r"(?P<name>.+?) \((?P<path>.+?)\) \[(?P<type>.+?)\]"
             procs = {}
             for proc in output.strip().split("\n"):
-                proc_name, proc_path, proc_type = proc.split(" ")
-
                 # an entry look like this:
                 # 'cfg_bids (<path/to/procedure>/cfg_bids.py) [python_script]'
                 match = re.fullmatch(regex, proc)
@@ -342,8 +339,6 @@ class ProcedureHandling():
                         "path": procedure["path"],
                         "type": procedure["type"]
                     }
-
-        # od = collections.OrderedDict(sorted(procs.items()))
 
         return procs
 
@@ -476,7 +471,7 @@ class ProcedureHandling():
         # register additional procedure dir in datalad
         self._register_proc_dir(procedure_dir, overwrite)
 
-    def get_active_procedure(self) -> list:
+    def get_active_procedures(self) -> list:
         """ Get all procedures registered to be executed in the conversion """
 
         # open config file and read procedures
@@ -551,10 +546,12 @@ class ProcedureHandling():
 def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
+    config = BidsConfigHandling().read()
+
     choices = dict(
         import_data="Import data",
         register_rule="Configure and register rule",
-        add_procedure="Add procedure",
+        add_procedure="Add procedure »",
         preview="Generate preview",
         check="Check for BIDS conformity",
         cleanup="Cleanup",
@@ -687,51 +684,79 @@ def configure_bids_conversion():
             conv.register_rule()
 
         elif mode == choices["add_procedure"]:
-            proc_handler = ProcedureHandling(setup.dataset_path)
+            switch = Switcher(setup.dataset_path, answers)
 
-            if answers["procedure_select"] == choices["proc_active"]:
-                proc_handler.show_active_procedure()
-
-            elif answers["procedure_select"] == choices["proc_create"]:
-                proc_handler.create_procedure(answers["procedure_type"],
-                                              answers["procedure_name"])
-
-            elif answers["procedure_select"] == choices["proc_import"]:
-                proc_handler.import_procedure(answers["procedure_file"],
-                                              answers["procedure_file_name"])
-
-            elif answers["procedure_select"] == choices["proc_register"]:
-                try:
-                    proc_handler.register_procedure_dir(
-                        answers["procedure_dir"]
-                    )
-                except NotPossible:
-                    if questionary.confirm("Overwrite?").ask():
-                        proc_handler.register_procedure_dir(
-                            answers["procedure_dir"],
-                            overwrite=False
-                        )
-
-            elif answers["procedure_select"] == choices["proc_activate"]:
-                # get procedure name: select from all available procedures
-                available = proc_handler.get_available_procedures()
-                chosen_procs = questionary.checkbox(
-                    "Select a procedure to activate",
-                    choices=sorted([key for key in available])
-                ).ask() or []
-                proc_handler.activate_procedures(chosen_procs)
-
-            elif answers["procedure_select"] == choices["proc_deactivate"]:
-                # get procedure name: select from all available procedures
-                available = proc_handler.get_active_procedure()
-                chosen_procs = questionary.checkbox(
-                    "Select a procedure to deactivate",
-                    choices=sorted([key for key in available])
-                ).ask() or []
-                proc_handler.deactivate_procedures(chosen_procs)
+            choices_reverted = dict(
+                (value, key) for key, value in choices.items()
+            )
+            getattr(switch, choices_reverted[answers["procedure_select"]])()
 
         elif mode == choices["preview"]:
             conv.generate_preview()
 
         elif mode == choices["check"]:
             pass
+
+
+class Switcher():
+    """ Switcher for procedure action
+
+    The purpose of this class is to simplify the questionary checking.
+    Insead of checking each value manually the according Switcher method
+    can be called. E.g.
+    Use
+       getattr(Switcher, "proc_active"])()
+    Instead of
+       if answers["procedure_select"] == choices["proc_active"]:
+           proc_handler.show_active_procedure()
+
+    """
+
+    def __init__(self, dataset_path, answers):
+        self.proc_handler = ProcedureHandling(dataset_path)
+        self.answers = answers
+
+    def proc_active(self):
+        """ Wrapper around ProcedureHandler """
+        self.proc_handler.show_active_procedure()
+
+    def proc_create(self):
+        """ Wrapper around ProcedureHandler """
+        self.proc_handler.create_procedure(self.answers["procedure_type"],
+                                           self.answers["procedure_name"])
+
+    def proc_import(self):
+        """ Wrapper around ProcedureHandler """
+        self.proc_handler.import_procedure(self.answers["procedure_file"],
+                                           self.answers["procedure_file_name"])
+
+    def proc_register(self):
+        """ Wrapper around ProcedureHandler """
+        try:
+            self.proc_handler.register_procedure_dir(
+                self.answers["procedure_dir"]
+            )
+        except NotPossible:
+            if questionary.confirm("Overwrite?").ask():
+                self.proc_handler.register_procedure_dir(
+                    self.answers["procedure_dir"],
+                    overwrite=True
+                )
+
+    def proc_activate(self):
+        """ Wrapper around ProcedureHandler """
+        # get procedure name: select from all available procedures
+        chosen_procs = questionary.checkbox(
+            "Select a procedure to activate",
+            choices=sorted(self.proc_handler.get_available_procedures())
+        ).ask() or []
+        self.proc_handler.activate_procedures(chosen_procs)
+
+    def proc_deactivate(self):
+        """ Wrapper around ProcedureHandler """
+        # get procedure name: select from all available procedures
+        chosen_procs = questionary.checkbox(
+            "Select a procedure to deactivate",
+            choices=sorted(self.proc_handler.get_active_procedures())
+        ).ask() or []
+        self.proc_handler.deactivate_procedures(chosen_procs)
