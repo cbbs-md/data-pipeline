@@ -30,6 +30,19 @@ def get_config(filename: str) -> dict:
     return config
 
 
+def write_config(config: dict, filename: str):
+    """ Write config to to file.
+
+    Args:
+        config: The configuration to write.
+        filename: File to write the config to.
+    """
+    config_file = Path(filename)
+
+    with config_file.open('w') as config_f:
+        yaml.dump(config, config_f)
+
+
 def setup_logging(log_level=logging.DEBUG):
     """ Set up a logger.
 
@@ -91,7 +104,7 @@ def write_subjects(subjects: list, filename: str):
         json.dump(subjects, my_file, indent=4, sort_keys=True)
 
 
-def read_spec(file_name: str or Path) -> list:
+def read_spec(file_name: Union[str, Path]) -> list:
     """ Reads a datalad spec file and converts it into proper python objects
 
     Args:

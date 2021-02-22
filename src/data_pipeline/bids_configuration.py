@@ -224,32 +224,6 @@ class BidsConfiguration():
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
-    def show_active_procedure(self):
-        """ Show all procedures registered to be executed in the conversion """
-
-        # open config file and read procedures
-        pass
-
-    def _get_active_procedures(self):
-        return []
-
-    def activate_procedures(self, procedures):
-
-        # read procedures from config file
-        active_procedures = self._get_active_procedures()
-
-        for proc in procedures:
-            # check if contained already
-            if proc in active_procedures:
-                self.log.info("Procedure %s is already active", proc)
-                continue
-
-            # add and write back into config
-            # what is with additional procedure parameters?
-
-    def deactivate_procedures(self, procedures):
-        pass
-
     def generate_preview(self):
         """ Generade bids converion """
 
@@ -329,7 +303,7 @@ class BidsConfiguration():
             )
 
 
-class ProcedureHandling(object):
+class ProcedureHandling():
     """ Handles everything concerning procedures """
 
     def __init__(self, dataset_path):
@@ -487,16 +461,94 @@ class ProcedureHandling(object):
 
     def register_procedure_dir(self, procedure_dir: str,
                                overwrite: bool = False):
+        """ Registers a procedure dir in datalad
+
+        Args:
+            procedure_dir: The directory to register
+            overwrite: Optional; In case another procedure dir is already
+                       registered, if it should be overwritten.
+        """
 
         # check if additional procedure_dir exists
         if not Path(procedure_dir).exists():
-            self.log.error("Procedure dir %s, does not exist", procedure_dir)
+            self.log.warning("Procedure dir %s, does not exist", procedure_dir)
 
         # register additional procedure dir in datalad
         self._register_proc_dir(procedure_dir, overwrite)
 
+    def get_active_procedure(self) -> list:
+        """ Get all procedures registered to be executed in the conversion """
 
-def _ask_questions() -> (dict, dict):
+        # open config file and read procedures
+        return self.confhandler.get_active_procedures()
+
+    def show_active_procedure(self):
+        """ Show all procedures registered to be executed in the conversion """
+
+        self.log.info("Active procedures: %s", self.get_active_procedures())
+
+    def activate_procedures(self, procedures: list):
+        """ Activate procedures in the config file
+
+        The config file is used to store active procedures to keep track of
+        them even if the application is restarted.
+
+        Args:
+            procedures: The names of the procedures to activate
+        """
+
+        self._change_active_procedures(procedures, action="activate")
+
+        # TODO what is with additional procedure parameters?
+
+    def deactivate_procedures(self, procedures: list):
+        """ Remove procedures from the active list
+
+        Args:
+            procedures: The names of the procedures to deactivate.
+        """
+
+        self._change_active_procedures(procedures, action="deactivate")
+
+    def _change_active_procedures(self, procedures: list, action: str):
+        """ Add/Remove procedures from the active list
+
+        Args:
+            procedures: The names of the procedures to activate/deactivate.
+            action: What to do with the procedures:
+                activate: They will be activated.
+                deactivate: They will be deactivated.
+        """
+
+        if not procedures:
+            self.log.warning("No procedure chosen.")
+
+        # read procedures from config file
+        active_procedures = self.confhandler.get_active_procedures()
+
+        for proc in procedures:
+            # check if contained already
+            if action == "activate":
+                if proc in active_procedures:
+                    self.log.info("Procedure %s is already active", proc)
+                    continue
+
+                active_procedures.append(proc)
+
+            if action == "deactivate":
+                if proc not in active_procedures:
+                    self.log.info("Procedure %s is not active", proc)
+                    continue
+
+                active_procedures.remove(proc)
+
+            self.log.info("Procedure to %s '%s'", action, proc)
+
+        # add and write back into config
+        self.confhandler.write_active_procedures(sorted(active_procedures))
+
+
+def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
     choices = dict(
@@ -508,10 +560,11 @@ def _ask_questions() -> (dict, dict):
         cleanup="Cleanup",
 
         proc_active="Show active procedures",
+        proc_activate="Activate procedure",
+        proc_deactivate="Deactivate procedure",
         proc_create="Create new procedure",
         proc_import="Import procedure",
         proc_register="Register additional procedure location",
-        proc_activate="Activate procedure",
     )
 
     questions = [
@@ -552,10 +605,11 @@ def _ask_questions() -> (dict, dict):
             "when": lambda x: x["step_select"] == choices["add_procedure"],
             "choices": [
                 choices["proc_active"],
+                choices["proc_activate"],
+                choices["proc_deactivate"],
                 choices["proc_create"],
                 choices["proc_import"],
                 choices["proc_register"],
-                choices["proc_activate"],
                 questionary.Separator(),
                 "Return",
             ],
@@ -636,7 +690,7 @@ def configure_bids_conversion():
             proc_handler = ProcedureHandling(setup.dataset_path)
 
             if answers["procedure_select"] == choices["proc_active"]:
-                conv.show_active_procedure()
+                proc_handler.show_active_procedure()
 
             elif answers["procedure_select"] == choices["proc_create"]:
                 proc_handler.create_procedure(answers["procedure_type"],
@@ -655,7 +709,7 @@ def configure_bids_conversion():
                     if questionary.confirm("Overwrite?").ask():
                         proc_handler.register_procedure_dir(
                             answers["procedure_dir"],
-                            overwrite=True
+                            overwrite=False
                         )
 
             elif answers["procedure_select"] == choices["proc_activate"]:
@@ -665,7 +719,16 @@ def configure_bids_conversion():
                     "Select a procedure to activate",
                     choices=sorted([key for key in available])
                 ).ask() or []
-                conv.activate_procedures(chosen_procs)
+                proc_handler.activate_procedures(chosen_procs)
+
+            elif answers["procedure_select"] == choices["proc_deactivate"]:
+                # get procedure name: select from all available procedures
+                available = proc_handler.get_active_procedure()
+                chosen_procs = questionary.checkbox(
+                    "Select a procedure to deactivate",
+                    choices=sorted([key for key in available])
+                ).ask() or []
+                proc_handler.deactivate_procedures(chosen_procs)
 
         elif mode == choices["preview"]:
             conv.generate_preview()
