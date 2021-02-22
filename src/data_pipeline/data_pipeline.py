@@ -1,5 +1,7 @@
 """ The main executable to run the tool """
 import logging
+from pathlib import Path
+import sys
 
 import click
 
@@ -53,14 +55,28 @@ def _setup_logging():
 
 
 @click.command()
+@click.option("--setup", is_flag=True,
+              help="Sets up inside the project dir")
+@click.option("--project", type=str, default=Path.cwd(),
+              help="Choose the project directory")
 @click.option("--configure", is_flag=True,
               help="Prepares and configure the bids convesion")
-def main(configure):
+def main(setup, project, configure):
     """ Execute data-pipeline """
     _setup_logging()
 
+    if project:
+        # check that project dir exists
+        if not Path(project).exists():
+            logging.error("Project dir %s does not exist", project)
+            sys.exit(1)
+
+    if setup:
+        # create a config file in the project dir
+        pass
+
     if configure:
-        configure_bids_conversion()
+        configure_bids_conversion(project)
 
 
 if __name__ == "__main__":

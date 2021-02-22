@@ -666,7 +666,7 @@ def _ask_questions() -> Tuple[dict, dict]:
     return questionary.prompt(questions), choices
 
 
-def configure_bids_conversion():
+def configure_bids_conversion(project_dir):
     """ Sets up a datalad dataset and prepares the convesion """
 
     while True:
@@ -676,7 +676,7 @@ def configure_bids_conversion():
 
         mode = answers["step_select"]
 
-        setup = SetupDatalad()
+        setup = SetupDatalad(project_dir)
         conv = BidsConfiguration(setup.dataset_path)
 
         if mode == choices["import_data"]:

@@ -8,14 +8,14 @@ import jsonschema
 import data_pipeline.utils as utils
 
 
-class SetupDatalad(object):
+class SetupDatalad():
     """ Set up a datalad dataset and preconfigure it"""
 
-    def __init__(self):
+    def __init__(self, project_dir):
 
         self.config = self._get_config(filename="config.yaml")
         self.dataset_name = self.config["dataset_name"]
-        self.dataset_path = Path(self.config["working_dir"],
+        self.dataset_path = Path(project_dir,
                                  self.config["dataset_name"]).expanduser()
 
         self.log = utils.get_logger(__class__)
