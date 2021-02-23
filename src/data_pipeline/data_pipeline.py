@@ -7,6 +7,7 @@ import sys
 import click
 
 from data_pipeline.bids_configuration import configure_bids_conversion
+from data_pipeline.config_handler import ConfigHandler
 
 
 def _setup_logging():
@@ -66,10 +67,13 @@ def main(setup, project, configure):
     """ Execute data-pipeline """
     _setup_logging()
 
-    project = Path(project)
+    # also relative paths like ../<my_project_dir> are allowed
+    project = Path(project).resolve()
     config_filename = "config.yaml"
+    config_path = Path(project, config_filename)
 
     if project:
+        logging.info("Using project dir: %s", project)
         # check that project dir exists
         if not project.exists():
             logging.error("Project dir %s does not exist", project)
@@ -81,8 +85,9 @@ def main(setup, project, configure):
         # create a config file in the project dir
         source = Path(Path(__file__).parent.absolute(),
                       "templates", "config_template.yaml")
-        target = Path(project, config_filename)
-        shutil.copy(source, target)
+        shutil.copy(source, config_path)
+
+    ConfigHandler(config_file=config_path)
 
     if configure:
         configure_bids_conversion(project)

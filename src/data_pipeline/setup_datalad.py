@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import datalad.api as datalad
-import jsonschema
 
 import data_pipeline.utils as utils
+from data_pipeline.config_handler import ConfigHandler
 
 
 class SetupDatalad():
@@ -13,7 +13,7 @@ class SetupDatalad():
 
     def __init__(self, project_dir):
 
-        self.config = self._get_config(filename="config.yaml")
+        self.config = self._get_config()
         self.dataset_name = self.config["dataset_name"]
         self.dataset_path = Path(project_dir,
                                  self.config["dataset_name"]).expanduser()
@@ -22,7 +22,7 @@ class SetupDatalad():
         self.dataset = None
 
     @staticmethod
-    def _get_config(filename):
+    def _get_config():
 
         schema = {
             "type": "object",
@@ -30,21 +30,18 @@ class SetupDatalad():
                 "bids": {
                     "type": "object",
                     "properties": {
-                        "working_dir": {"type": "string"},
                         "dataset_name": {"type": "string"},
                         "patches": {"type": "array"}
                     },
-                    "required": ["working_dir", "dataset_name"]
+                    "required": ["dataset_name"]
                 },
             },
             "required": ["bids"]
         }
 
-        config = utils.get_config(filename=filename)
-
-        jsonschema.validate(config, schema)
-        # TODO catch jsonschema.exceptions.ValidationError for proper logging
-
+        config_handler = ConfigHandler.get_instance()
+        config = ConfigHandler.get_instance().get()
+        config_handler.validate(config=config, schema=schema)
         return config["bids"]
 
     def run(self):

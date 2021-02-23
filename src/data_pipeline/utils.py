@@ -145,7 +145,7 @@ def get_logger_name() -> str:
     return "data-pipeline"
 
 
-def get_logger(my_class, postfix=None) -> logging.Logger:
+def get_logger(my_class, postfix: str = None) -> logging.Logger:
     """Return a logger with a name corresponding to the tool set.
 
     Will return a logger of the the name data-pipeline.<class_module>.<class>

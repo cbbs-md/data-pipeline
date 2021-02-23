@@ -7,101 +7,16 @@ import shutil
 from typing import Tuple, Union
 
 import click
-import jsonschema
 import datalad.api as datalad
 import questionary
 
 from data_pipeline.setup_datalad import SetupDatalad
 import data_pipeline.utils as utils
+from data_pipeline.config_handler import ConfigHandler
 
 
 class NotPossible(Exception):
     """ Raised when the requested action is not possible """
-
-
-class BidsConfigHandling():
-    """ Handle all configuration file access """
-
-    def __init__(self, config_file="config.yaml"):
-        self.config_file = config_file
-
-    def validate(self, config: dict):
-        """ Validate the configuration
-
-        Checks that the configuration containes all parameters requiered for
-        the bids configuration
-        """
-
-        schema = {
-            "type": "object",
-            "properties": {
-                "bids": {
-                    "type": "object",
-                    "properties": {
-                        "active_procedures": {"type": "array"},
-                        "dataset_name": {"type": "string"},
-                        "patches": {"type": "array"},
-                        "default_procedure_dir": {"type": "string"},
-                        "procedure_python_template": {"type": "string"},
-                        "procedure_shell_template": {"type": "string"},
-                        "rule_dir": {"type": "string"},
-                        "rule_name": {"type": "string"},
-                        "rule_template": {"type": "string"},
-                    },
-                    "required": [
-                        "dataset_name",
-                        "default_procedure_dir",
-                        "procedure_python_template",
-                        "procedure_shell_template",
-                        "rule_dir",
-                        "rule_name",
-                        "rule_template",
-                    ]
-                },
-            },
-            "required": ["bids"]
-        }
-
-        jsonschema.validate(config, schema)
-        # TODO catch jsonschema.exceptions.ValidationError for proper logging
-
-    def read(self) -> dict:
-        """ Reads the configuration from the config file """
-        config = utils.get_config(filename=self.config_file)
-        self.validate(config)
-
-        return config["bids"]
-
-    def get_active_procedures(self) -> list:
-        """Get the active procedures.
-
-        Returns:
-            The procedure marked as active in the config file.
-        """
-        bids_config = self.read()
-
-        return bids_config.get("active_procedures", [])
-
-    def write_active_procedures(self, procedures: list):
-        """ Writes the active procedures into the config file.
-
-        Args:
-            procedures: The procedures to activate
-        """
-        config = utils.get_config(filename=self.config_file)
-        config["bids"]["active_procedures"] = procedures
-
-        self.write(config)
-
-    def write(self, config: dict):
-        """ Write a new configuration into the config file
-
-        Args:
-            config: The new configuration. This has to be match the defined
-                    schema.
-        """
-        self.validate(config)
-        utils.write_config(config, filename=self.config_file)
 
 
 class BidsConfiguration():
@@ -114,8 +29,7 @@ class BidsConfiguration():
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
 
-        self.confhandler = BidsConfigHandling()
-        self.config = self.confhandler.read()
+        self.config = ConfigHandler.get_instance().get("bids")
 
         self.acqid = "bids_rule_config"
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
@@ -308,8 +222,8 @@ class ProcedureHandling():
         self.dataset_path = dataset_path
         self.dataset = datalad.Dataset(self.dataset_path)
 
-        self.confhandler = BidsConfigHandling()
-        self.config = self.confhandler.read()
+        self.confhandler = ConfigHandler.get_instance()
+        self.config = self.confhandler.get("bids")
 
         self.log = utils.get_logger(__class__)
 
@@ -475,7 +389,7 @@ class ProcedureHandling():
         """ Get all procedures registered to be executed in the conversion """
 
         # open config file and read procedures
-        return self.confhandler.get_active_procedures()
+        return self.confhandler.get("bids").get("active_procedures", [])
 
     def show_active_procedure(self):
         """ Show all procedures registered to be executed in the conversion """
@@ -519,7 +433,7 @@ class ProcedureHandling():
             self.log.warning("No procedure chosen.")
 
         # read procedures from config file
-        active_procedures = self.confhandler.get_active_procedures()
+        active_procedures = self.get_active_procedures()
 
         for proc in procedures:
             # check if contained already
@@ -540,13 +454,17 @@ class ProcedureHandling():
             self.log.info("Procedure to %s '%s'", action, proc)
 
         # add and write back into config
-        self.confhandler.write_active_procedures(sorted(active_procedures))
+        self.confhandler.update_parameter(
+            module="bids",
+            parameter="active_procedures",
+            value=sorted(active_procedures)
+        )
 
 
 def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
-    config = BidsConfigHandling().read()
+    config = ConfigHandler.get_instance().get("bids")
 
     choices = dict(
         import_data="Import data",
@@ -666,6 +584,37 @@ def _ask_questions() -> Tuple[dict, dict]:
 
 def configure_bids_conversion(project_dir):
     """ Sets up a datalad dataset and prepares the convesion """
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "bids": {
+                "type": "object",
+                "properties": {
+                    "active_procedures": {"type": "array"},
+                    "dataset_name": {"type": "string"},
+                    "patches": {"type": "array"},
+                    "default_procedure_dir": {"type": "string"},
+                    "procedure_python_template": {"type": "string"},
+                    "procedure_shell_template": {"type": "string"},
+                    "rule_dir": {"type": "string"},
+                    "rule_name": {"type": "string"},
+                    "rule_template": {"type": "string"},
+                },
+                "required": [
+                    "dataset_name",
+                    "default_procedure_dir",
+                    "procedure_python_template",
+                    "procedure_shell_template",
+                    "rule_dir",
+                    "rule_name",
+                    "rule_template",
+                ]
+            },
+        },
+        "required": ["bids"]
+    }
+    ConfigHandler.get_instance().add_schema("bids", schema)
 
     while True:
         answers, choices = _ask_questions()
