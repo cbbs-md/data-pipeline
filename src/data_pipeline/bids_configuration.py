@@ -1,6 +1,8 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
+import copy
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -213,6 +215,48 @@ class BidsConfiguration():
                 # acquisition=
                 # properties=
             )
+
+    def run_bids_validator(self):
+        """ Checks the dataset for bids conformity"""
+
+        name = self.config["validator_container_name"]
+        image_url = self.config["validator_image_url"]
+        container_dir = Path(self.config["container_dir"])
+        if not container_dir.is_absolute():
+            container_dir = Path(self.dataset_path, container_dir)
+
+        if not container_dir.exists():
+            container_dir.mkdir()
+
+        container_path = Path(container_dir, name)
+        if not container_path.exists():
+            # modify environment only for exectued command and not whole
+            # process
+            environment = copy.deepcopy(os.environ)
+            environment["SINGULARITY_PULLFOLDER"] = str(container_dir)
+
+            utils.run_cmd(
+                [
+                    "singularity", "pull", "--name",
+                    name, image_url,
+                ],
+                self.log,
+                env=environment
+            )
+
+        # singularity run --no-home --containall --bind $DIR_TO_CHECK:/data
+        #     $CONTAINER_PATH /data
+        utils.run_cmd(
+            [
+                "singularity", "run",
+                "--no-home",
+                "--containall",
+                "--bind", "{}:/data".format(self.dataset_path),
+                str(container_path), "/data"
+            ],
+            self.log,
+            raise_exception=False
+        )
 
 
 class ProcedureHandling():
@@ -600,6 +644,9 @@ def configure_bids_conversion(project_dir):
                     "rule_dir": {"type": "string"},
                     "rule_name": {"type": "string"},
                     "rule_template": {"type": "string"},
+                    "validator_container_name": {"type": "string"},
+                    "validator_image_url": {"type": "string"},
+                    "container_dir": {"type": "string"},
                 },
                 "required": [
                     "dataset_name",
@@ -609,6 +656,9 @@ def configure_bids_conversion(project_dir):
                     "rule_dir",
                     "rule_name",
                     "rule_template",
+                    "validator_container_name",
+                    "validator_image_url",
+                    "container_dir",
                 ]
             },
         },
@@ -645,7 +695,7 @@ def configure_bids_conversion(project_dir):
             conv.generate_preview()
 
         elif mode == choices["check"]:
-            pass
+            conv.run_bids_validator()
 
 
 class Switcher():

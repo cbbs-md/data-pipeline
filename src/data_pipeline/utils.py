@@ -164,18 +164,23 @@ def get_logger(my_class, postfix: str = None) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def run_cmd(cmd: list, log: logging.Logger, error_message: str = None) -> str:
+def run_cmd(cmd: list, log: logging.Logger, error_message: str = None,
+            raise_exception: bool = True, env: dict = None) -> str:
     """ Runs a command via subprocess and returns the output
 
     Args:
         cmd: A list of strings definied as for subpocess.run method
         log: a logging logger
         error_message: Message to user when an error occures
+        raise_exception: Optional; If an exception should be raised or not in
+            case something went wrong during command execution.
+        env: Optional; In case the command should be exectued in a special
+            environment
     """
 
     try:
         # pylint: disable=subprocess-run-check
-        proc = subprocess.run(cmd, capture_output=True)
+        proc = subprocess.run(cmd, capture_output=True, env=env)
     except Exception:
         if error_message:
             log.error(error_message)
@@ -196,9 +201,10 @@ def run_cmd(cmd: list, log: logging.Logger, error_message: str = None) -> str:
                       proc.stderr.decode("utf-8"))
             raise Exception(error_message)
 
-        log.error("Command failed with error %s",
-                  proc.stderr.decode("utf-8"))
-        raise Exception()
+        if raise_exception:
+            log.error("Command failed with error %s",
+                      proc.stderr.decode("utf-8"))
+            raise Exception()
 
     return proc.stdout.decode("utf-8")
 
