@@ -138,8 +138,13 @@ class BidsConfiguration():
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
-    def generate_preview(self):
-        """ Generade bids converion """
+    def generate_preview(self, active_procedures: list):
+        """ Generade bids converion
+
+        Args:
+            active_procedures: The procedures to execute in addition. e.g.
+                addtional procedures for getting the event_files
+        """
 
         spec = self.spec_file.relative_to(self.dataset_path)
         self._create_studyspec(spec)
@@ -176,22 +181,25 @@ class BidsConfiguration():
 #            # only_type=
 #        )
 
-        # TODO run procedures
+        # run procedures
+        for procedure in active_procedures:
+            self.log.info("Execute procedure %s", procedure)
+            datalad.run_procedure(procedure, dataset=self.dataset)
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
                             "sourcedata")
-        src_tree = utils.run_cmd(["tree", "-d", src_data_dir], self.log)
+        src_tree = utils.run_cmd(
+            ["tree", "-d", src_data_dir], self.log
+        ).split("\n")
 
         # converted data
         bids_tree = utils.run_cmd_piped(
            [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
-        )
+        ).split("\n")
 
         # Generate nice output
-        src_tree = src_tree.split("\n")
         src_tree[0] = "source:"
-        bids_tree = bids_tree.split("\n")
         bids_tree[0] = "result:"
 
         self.log.info("Preview:\n %s",
@@ -695,7 +703,9 @@ def configure_bids_conversion(project_dir):
             getattr(switch, choices_reverted[answers["procedure_select"]])()
 
         elif mode == choices["preview"]:
-            conv.generate_preview()
+            proc_handler = ProcedureHandling(setup.dataset_path)
+            active_procedures = proc_handler.get_active_procedures()
+            conv.generate_preview(active_procedures)
 
         elif mode == choices["check"]:
             conv.run_bids_validator()
