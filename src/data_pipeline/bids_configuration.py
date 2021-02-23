@@ -684,6 +684,9 @@ def configure_bids_conversion(project_dir):
             conv.register_rule()
 
         elif mode == choices["add_procedure"]:
+            if answers["procedure_select"] == "Return":
+                continue
+
             switch = Switcher(setup.dataset_path, answers)
 
             choices_reverted = dict(
