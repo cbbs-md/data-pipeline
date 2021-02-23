@@ -526,9 +526,7 @@ def _ask_questions() -> Tuple[dict, dict]:
         check="Check for BIDS conformity",
         cleanup="Cleanup",
 
-        proc_active="Show active procedures",
-        proc_activate="Activate procedure",
-        proc_deactivate="Deactivate procedure",
+        proc_change="Change active procedures",
         proc_create="Create new procedure",
         proc_import="Import procedure",
         proc_register="Register additional procedure location",
@@ -571,9 +569,7 @@ def _ask_questions() -> Tuple[dict, dict]:
             "message": "What do you want to do?",
             "when": lambda x: x["step_select"] == choices["add_procedure"],
             "choices": [
-                choices["proc_active"],
-                choices["proc_activate"],
-                choices["proc_deactivate"],
+                choices["proc_change"],
                 choices["proc_create"],
                 choices["proc_import"],
                 choices["proc_register"],
@@ -756,20 +752,32 @@ class Switcher():
                     overwrite=True
                 )
 
-    def proc_activate(self):
-        """ Wrapper around ProcedureHandler """
-        # get procedure name: select from all available procedures
-        chosen_procs = questionary.checkbox(
-            "Select a procedure to activate",
-            choices=sorted(self.proc_handler.get_available_procedures())
-        ).ask() or []
-        self.proc_handler.activate_procedures(chosen_procs)
+    def proc_change(self):
+        """ Activate or deactivate procedures """
 
-    def proc_deactivate(self):
-        """ Wrapper around ProcedureHandler """
-        # get procedure name: select from all available procedures
+        active_procedures = self.proc_handler.get_active_procedures()
+        available_procedures = self.proc_handler.get_available_procedures()
+
+        # determine defaults for choices
+        choices = []
+        for proc in sorted(available_procedures):
+            if proc in active_procedures:
+                choices.append(questionary.Choice(proc, checked=True))
+            else:
+                choices.append(proc)
+
+        # get procedure names: select from all available procedures
         chosen_procs = questionary.checkbox(
-            "Select a procedure to deactivate",
-            choices=sorted(self.proc_handler.get_active_procedures())
+            "Select active procedures",
+            choices=choices
         ).ask() or []
-        self.proc_handler.deactivate_procedures(chosen_procs)
+
+        # activate or deactivate accordingly
+        procs_to_activate = set(chosen_procs) - set(active_procedures)
+        if procs_to_activate:
+            self.proc_handler.activate_procedures(procs_to_activate)
+
+        procs_to_deactivate = set(active_procedures) - set(chosen_procs)
+        if procs_to_deactivate:
+            self.proc_handler.deactivate_procedures(procs_to_deactivate)
+
