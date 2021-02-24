@@ -690,39 +690,61 @@ def configure_bids_conversion(project_dir):
         if not answers or answers["step_select"] == "Exit":
             break
 
-        mode = answers["step_select"]
-
-        setup = SetupDatalad(project_dir)
-        conv = BidsConfiguration(setup.dataset_path)
-
-        if mode == choices["import_data"]:
-            setup.run()
-            conv.import_data(tarball=answers["data_path"])
-
-        elif mode == choices["register_rule"]:
-            conv.register_rule()
-
-        elif mode == choices["add_procedure"]:
-            if answers["procedure_select"] == "Return":
-                continue
-
-            switch = Switcher(setup.dataset_path, answers)
-
-            choices_reverted = dict(
-                (value, key) for key, value in choices.items()
-            )
-            getattr(switch, choices_reverted[answers["procedure_select"]])()
-
-        elif mode == choices["preview"]:
-            proc_handler = ProcedureHandling(setup.dataset_path)
-            active_procedures = proc_handler.get_active_procedures()
-            conv.generate_preview(active_procedures)
-
-        elif mode == choices["check"]:
-            conv.run_bids_validator()
+        switch = StepSwitcher(project_dir, choices, answers)
+        choices_reverted = {v: k for k, v in choices.items()}
+        getattr(switch, choices_reverted[answers["step_select"]])()
 
 
-class Switcher():
+class StepSwitcher():
+    """ Switcher for procedure action
+
+    The purpose of this class is to simplify the questionary checking.
+    Insead of checking each value manually the according Switcher method
+    can be called. E.g.
+    Use
+       getattr(StepSwitcher, "import_data"])()
+    Instead of
+       if answers["step_select"] == choices["import_data"]:
+           ...
+    """
+
+    def __init__(self, project_dir, choices, answers):
+        self.choices = choices
+        self.answers = answers
+        self.setup = SetupDatalad(project_dir)
+        self.conv = BidsConfiguration(self.setup.dataset_path)
+
+    def import_data(self):
+        """ Create dataset and import data"""
+        if not self.setup.dataset_path.exists():
+            self.setup.run()
+        self.conv.import_data(tarball=self.answers["data_path"])
+
+    def register_rule(self):
+        """ Wrapper around BidsConfiguration"""
+        self.conv.register_rule()
+
+    def add_procedure(self):
+        """ Handle all procedure relevant answers"""
+        if self.answers["procedure_select"] == "Return":
+            return
+
+        switch = ProcSwitcher(self.setup.dataset_path, self.answers)
+        choices_reverted = {v: k for k, v in self.choices.items()}
+        getattr(switch, choices_reverted[self.answers["procedure_select"]])()
+
+    def preview(self):
+        """ Wrapper around BidsConfiguration """
+        proc_handler = ProcedureHandling(self.setup.dataset_path)
+        active_procedures = proc_handler.get_active_procedures()
+        self.conv.generate_preview(active_procedures)
+
+    def check(self):
+        """ Wrapper around BidsConfiguration """
+        self.conv.run_bids_validator()
+
+
+class ProcSwitcher():
     """ Switcher for procedure action
 
     The purpose of this class is to simplify the questionary checking.
