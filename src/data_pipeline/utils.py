@@ -257,6 +257,23 @@ def run_cmd_piped(cmds: list,
     return output.decode("utf-8")
 
 
+def check_cmd(cmd: list) -> bool:
+    """ Runs the command and checks if it runs through
+
+    Args:
+        cmd: The command to run in subprocess syntax, i.e. as a list of
+            strings.
+    Returns:
+        True if the command worked, False if not.
+    """
+    try:
+        subprocess.run(cmd, check=True, capture_output=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def show_side_by_side(left: list, right: list) -> str:
     """ Shows two lists side by side
 

@@ -6,6 +6,7 @@ import datalad.api as datalad
 
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
+from data_pipeline.git_handler import GitBase
 
 
 class SetupDatalad():
@@ -58,7 +59,15 @@ class SetupDatalad():
             datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
 
             self._apply_patches()
-            # TODO commit to dataset: orig files
+            # commit patches to hirni
+            hirni_path = self.dataset_path/"code"/"hirni-toolbox"
+            hirni_dataset = datalad.Dataset(hirni_path)
+            # commit inside the submodule
+            datalad.save(path=".", dataset=hirni_dataset,
+                         message="Patch hirni")
+            # commit in the main git repo
+            datalad.save(path=hirni_path, dataset=self.dataset,
+                         message="Patch hirni")
 
         except Exception:
             self.log.error("Some error occurred", exc_info=True)

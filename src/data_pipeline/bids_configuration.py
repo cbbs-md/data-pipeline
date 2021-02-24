@@ -15,6 +15,7 @@ import questionary
 from data_pipeline.setup_datalad import SetupDatalad
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
+from data_pipeline.git_handler import GitBase
 
 
 class NotPossible(Exception):
@@ -112,13 +113,6 @@ class BidsConfiguration():
         self.log.info("Opening %s", abs_rule_file)
         click.edit(filename=abs_rule_file)
 
-        # TODO commit in dataset: changed .datalad.config, studyspec.json
-        # ds.save(
-        #   dataset=self.dataset, path=...,
-        #   message="Register and add custom rules to dataset configuration"
-        #   to_git=True (?)
-        # )
-
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
 
@@ -135,6 +129,9 @@ class BidsConfiguration():
         with self.spec_file.open("w") as f:
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
+
+        datalad.save(path=self.spec_file, dataset = self.dataset,
+                     message="Reset studyspec file")
 
     def generate_preview(self, active_procedures: dict):
         """ Generade bids converion
@@ -524,6 +521,114 @@ class ProcedureHandling():
         )
 
 
+class BidsGitHandling(GitBase):
+    """ To switch between starting and config branch """
+
+    def __init__(self, dataset_path):
+        super().__init__()
+
+        self.dataset_path = dataset_path
+        self.log = utils.get_logger(__class__)  # type: ignore
+        self.starting_branch = self._get_current_branch()
+        self.config_branch = "bids_config_branch"
+
+    def _get_current_branch(self):
+        with utils.ChangeWorkingDir(self.dataset_path):
+            return super()._get_current_branch()
+
+    def checkout_config_branch(self):
+        """ Switch to branch dedicated for bids config """
+
+        with utils.ChangeWorkingDir(self.dataset_path):
+            self.checkout_branch(self.config_branch,
+                                 rebase=self.starting_branch,
+                                 do_create=True)
+
+    def checkout_starting_branch(self):
+        """ Switch back to starting branch """
+
+        self.stash()
+        with utils.ChangeWorkingDir(self.dataset_path):
+            self.checkout_branch(self.starting_branch)
+        self.stash(pop=True)
+
+    def stash(self, pop: bool = False):
+        """Wrapper anound GitBase """
+        with utils.ChangeWorkingDir(self.dataset_path):
+            super().stash(pop)
+
+    def check_if_to_be_committed(self, path: str):
+        with utils.ChangeWorkingDir(self.dataset_path):
+
+            if self.is_tracked(path):
+                # path is already tracked but was changed
+                return self.was_changed(path)
+            if Path(path).exists():
+                # path is not tracked yet
+                return True
+            # path does not exist
+            return False
+
+    def commit(self):
+        # ass config and hirni changes
+        path = ".datalad/config"
+        if self.check_if_to_be_committed(path):
+            datalad.save(
+                path,
+                dataset=self.dataset_path,
+                message=("Modify datalad config for custom rule and "
+                            "procedures")
+            )
+
+        # add rule
+        try:
+            rule_file = self.determine_dir(section="datalad.hirni.dicom2spec",
+                                           option="rules")
+            does_exist = True
+        except Exception:
+            does_exist = False
+
+        if does_exist and self.check_if_to_be_committed(rule_file):
+            datalad.save(rule_file, dataset=self.dataset_path,
+                         message="Add/modify custom rule", to_git=True)
+        #   message="Register and add custom rules to dataset configuration"
+
+            rule_base_file = Path(rule_file).with_name("rules_base.py")
+            if self.check_if_to_be_committed(rule_base_file):
+                datalad.save(rule_base_file, dataset=self.dataset_path,
+                             message="Add rule_base file", to_git=True)
+
+        # add procedures
+        try:
+            procedure_dir = self.determine_dir(section="datalad.locations",
+                                               option="dataset-procedures")
+        except Exception:
+            does_exist = False
+        if does_exist and self.check_if_to_be_committed(procedure_dir):
+            datalad.save(procedure_dir, dataset=self.dataset_path,
+                         message="Add procedures", to_git=True)
+
+    def determine_dir(self, section: str, option: str) -> Union[str, Path]:
+        """ Get dir from datalad config """
+
+        config = datalad.Dataset(self.dataset_path).config
+
+        if config.has_option(section, option):
+            configured_dir = Path(config.get(section + "." + option))
+
+            if not configured_dir.is_absolute():
+                configured_dir = self.dataset_path/configured_dir
+
+            return configured_dir
+
+        raise Exception("No entry in datalad config")
+
+    def remove_config_branch(self):
+        """ Remove the config branch """
+        with utils.ChangeWorkingDir(self.dataset_path):
+            super().remove_branch(self.config_branch)
+
+
 def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
@@ -685,14 +790,26 @@ def configure_bids_conversion(project_dir):
     }
     ConfigHandler.get_instance().add_schema("bids", schema)
 
-    while True:
-        answers, choices = _ask_questions()
-        if not answers or answers["step_select"] == "Exit":
-            break
+    setup = SetupDatalad(project_dir)
+    if not setup.dataset_path.exists():
+        setup.run()
 
-        switch = StepSwitcher(project_dir, choices, answers)
-        choices_reverted = {v: k for k, v in choices.items()}
-        getattr(switch, choices_reverted[answers["step_select"]])()
+    repo = BidsGitHandling(setup.dataset_path)
+    repo.checkout_config_branch()
+
+    try:
+        while True:
+            answers, choices = _ask_questions()
+            if not answers or answers["step_select"] == "Exit":
+                break
+
+            switch = StepSwitcher(setup.dataset_path, choices, answers, repo)
+            choices_reverted = {v: k for k, v in choices.items()}
+            getattr(switch, choices_reverted[answers["step_select"]])()
+    finally:
+        repo.checkout_starting_branch()
+        # commit changes in .datalad/config, rules, procedures
+        repo.commit()
 
 
 class StepSwitcher():
@@ -708,16 +825,15 @@ class StepSwitcher():
            ...
     """
 
-    def __init__(self, project_dir, choices, answers):
+    def __init__(self, dataset_path, choices, answers, git_repo):
+        self.dataset_path = dataset_path
         self.choices = choices
         self.answers = answers
-        self.setup = SetupDatalad(project_dir)
-        self.conv = BidsConfiguration(self.setup.dataset_path)
+        self.git_repo = git_repo
+        self.conv = BidsConfiguration(self.dataset_path)
 
     def import_data(self):
         """ Create dataset and import data"""
-        if not self.setup.dataset_path.exists():
-            self.setup.run()
         self.conv.import_data(tarball=self.answers["data_path"])
 
     def register_rule(self):
@@ -729,13 +845,13 @@ class StepSwitcher():
         if self.answers["procedure_select"] == "Return":
             return
 
-        switch = ProcSwitcher(self.setup.dataset_path, self.answers)
+        switch = ProcSwitcher(self.dataset_path, self.answers)
         choices_reverted = {v: k for k, v in self.choices.items()}
         getattr(switch, choices_reverted[self.answers["procedure_select"]])()
 
     def preview(self):
         """ Wrapper around BidsConfiguration """
-        proc_handler = ProcedureHandling(self.setup.dataset_path)
+        proc_handler = ProcedureHandling(self.dataset_path)
         active_procedures = proc_handler.get_active_procedures()
         self.conv.generate_preview(active_procedures)
 
