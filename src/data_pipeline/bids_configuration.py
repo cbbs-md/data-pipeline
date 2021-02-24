@@ -10,6 +10,7 @@ from typing import Tuple, Union
 
 import click
 import datalad.api as datalad
+import git
 import questionary
 
 from data_pipeline.setup_datalad import SetupDatalad
@@ -271,6 +272,34 @@ class BidsConfiguration():
             self.log,
             raise_exception=False
         )
+
+    def cleanup(self, git_repo):
+        """ Cleanup the configuration data
+
+        Cleans up the imported sourcedata and the converted bids data.
+        """
+        # remove imported source data
+        source_dir = self.dataset_path/self.acqid
+        if source_dir.exists():
+            self.log.info("Remove %s", source_dir)
+            # datalad remove bids_rule_config
+            datalad.remove(dataset=self.dataset_path, path=self.acqid)
+            utils.run_cmd(["rm", "-r", self.acqid], self.log,
+                          raise_exception=False)
+
+            # cleanup submodule entry in git (bug in datalad)
+            repo = git.Repo(self.dataset_path)
+            with repo.config_writer() as writer:
+                writer.remove_section('submodule "bids_rule_config/dicoms"')
+
+        # cleanup generated bids data
+        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
+        if bids_dir.exists():
+            self.log.info("Remove %s", bids_dir)
+            shutil.rmtree(bids_dir)
+
+        git_repo.checkout_starting_branch()
+        git_repo.remove_config_branch()
 
 
 class ProcedureHandling():
@@ -858,6 +887,10 @@ class StepSwitcher():
     def check(self):
         """ Wrapper around BidsConfiguration """
         self.conv.run_bids_validator()
+
+    def cleanup(self):
+        """ Wrapper around BidsConfiguration """
+        self.conv.cleanup(self.git_repo)
 
 
 class ProcSwitcher():
