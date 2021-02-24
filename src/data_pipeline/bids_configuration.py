@@ -33,11 +33,9 @@ class BidsConfiguration():
 
         self.config = ConfigHandler.get_instance().get("bids")
 
-        self.acqid = "bids_rule_config"
+        self.acqid = self.config["config_acqid"]
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
-        # hirni will remove underscores form the anon_subject entry
-        # e.g. bids_config -> bidsconfig
-        self.anon_subject = "bidsconfig"
+        self.anon_subject = self.config["config_anon_subject"]
 
     def import_data(self, tarball: str):
         """ Import tarball as subdataset
@@ -49,7 +47,7 @@ class BidsConfiguration():
         # datalad hirni-import-dcm --anon-subject "$ANON" \
         #   ../../original/sourcedata.tar.gz sourcedata
 
-        self.log.info("Import %s as anon-subject %s and aquisition %s",
+        self.log.info("Import %s: anon-subject=%s, aquisition=%s",
                       tarball, self.anon_subject, self.acqid)
 
         # creates a subdataset <acqid> under sourcedata/dicoms
@@ -658,6 +656,8 @@ def configure_bids_conversion(project_dir):
                     "validator_container_name": {"type": "string"},
                     "validator_image_url": {"type": "string"},
                     "container_dir": {"type": "string"},
+                    "config_acqid": {"type": "string"},
+                    "config_anon_subject": {"type": "string"},
                 },
                 "required": [
                     "dataset_name",
@@ -670,6 +670,8 @@ def configure_bids_conversion(project_dir):
                     "validator_container_name",
                     "validator_image_url",
                     "container_dir",
+                    "config_acqid",
+                    "config_anon_subject",
                 ]
             },
         },
@@ -725,7 +727,6 @@ class Switcher():
     Instead of
        if answers["procedure_select"] == choices["proc_create"]:
            proc_handler.create_procedure(...)
-
     """
 
     def __init__(self, dataset_path, answers):

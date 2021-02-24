@@ -5,6 +5,11 @@ bids:
         # to refer to the current path of the data-pipeline source code
         - "{data_pipeline_path}/patches/hirni_heuristic.patch"
 
+    config_acquid: bids_rule_config
+    # hirni will remove underscores form the anon_subject entry
+    # e.g. bids_config -> bidsconfig
+    config_anon_subject: bidsconfig
+
     default_procedure_dir: code/procedures
     procedure_python_template: templates/procedure_template.py
     procedure_shell_template: templates/procedure_template.sh
