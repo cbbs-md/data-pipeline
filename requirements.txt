@@ -1,5 +1,0 @@
-datalad
-datalad-hirni
-jsonschema
-PyYAML
-questionary
