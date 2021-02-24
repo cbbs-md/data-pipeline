@@ -10,7 +10,7 @@ from data_pipeline.bids_configuration import configure_bids_conversion
 from data_pipeline.config_handler import ConfigHandler
 
 
-def _setup_logging():
+def _setup_logging(project):
 
     log_level = "INFO"
 
@@ -36,7 +36,7 @@ def _setup_logging():
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": log_level,
                 "formatter": "precise",
-                "filename": "data_pipeline.log",
+                "filename": Path(project, "data_pipeline.log"),
                 "maxBytes": 10485760,
                 "backupCount": 3,
             }
@@ -65,10 +65,12 @@ def _setup_logging():
               help="Prepares and configure the bids convesion")
 def main(setup, project, configure):
     """ Execute data-pipeline """
-    _setup_logging()
 
     # also relative paths like ../<my_project_dir> are allowed
     project = Path(project).resolve()
+
+    _setup_logging(project)
+
     config_filename = "config.yaml"
     config_path = Path(project, config_filename)
 
