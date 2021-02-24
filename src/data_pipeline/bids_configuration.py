@@ -138,12 +138,14 @@ class BidsConfiguration():
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
-    def generate_preview(self, active_procedures: list):
+    def generate_preview(self, active_procedures: dict):
         """ Generade bids converion
 
         Args:
-            active_procedures: The procedures to execute in addition. e.g.
-                addtional procedures for getting the event_files
+            active_procedures: The procedures to execute in addition, including
+                the parameters to run them e.g. addtional procedures for
+                getting the event_files. Format is
+                {<proc_name>: {"parameters": <parameters>}, ...}
         """
 
         spec = self.spec_file.relative_to(self.dataset_path)
@@ -182,9 +184,12 @@ class BidsConfiguration():
 #        )
 
         # run procedures
-        for procedure in active_procedures:
-            self.log.info("Execute procedure %s", procedure)
-            datalad.run_procedure(procedure, dataset=self.dataset)
+        for procedure, values in active_procedures.items():
+            proc_spec = "{} {}".format(procedure, values["parameters"])
+            # replace {anon_subject}, ...
+            proc_spec = proc_spec.format(anon_subject=self.anon_subject)
+            self.log.info("Execute procedure %s", proc_spec)
+            datalad.run_procedure(proc_spec, dataset=self.dataset)
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
@@ -377,7 +382,7 @@ class ProcedureHandling():
             if registered_dir == Path(proc_dir):
                 # nothing to do
                 return
-            elif not overwrite:
+            if not overwrite:
                 msg = "Different procedure dir %s already registered."
                 self.log.error(msg, registered_dir)
                 raise NotPossible(msg, "")
@@ -437,45 +442,47 @@ class ProcedureHandling():
         # register additional procedure dir in datalad
         self._register_proc_dir(procedure_dir, overwrite)
 
-    def get_active_procedures(self) -> list:
-        """ Get all procedures registered to be executed in the conversion """
+    def get_active_procedures(self) -> dict:
+        """ Get all procedures registered to be executed in the conversion
+
+        Returns:
+            The active procedures including the set parameters in the form
+            {proc1: {"parameters": params1}, ... }
+        """
 
         # open config file and read procedures
-        return self.confhandler.get("bids").get("active_procedures", [])
+        active_procedures = (
+            self.confhandler.get("bids").get("active_procedures", {})
+        )
 
-    def show_active_procedure(self):
-        """ Show all procedures registered to be executed in the conversion """
+        return active_procedures
 
-        self.log.info("Active procedures: %s", self.get_active_procedures())
-
-    def activate_procedures(self, procedures: list):
+    def activate_procedures(self, procedures: dict):
         """ Activate procedures in the config file
 
         The config file is used to store active procedures to keep track of
         them even if the application is restarted.
 
         Args:
-            procedures: The names of the procedures to activate
+            procedures: The procedures to activate
         """
 
         self._change_active_procedures(procedures, action="activate")
 
-        # TODO what is with additional procedure parameters?
-
-    def deactivate_procedures(self, procedures: list):
-        """ Remove procedures from the active list
+    def deactivate_procedures(self, procedures: dict):
+        """ Remove procedures from the active procedure entry in the config file
 
         Args:
-            procedures: The names of the procedures to deactivate.
+            procedures: The procedures to deactivate.
         """
 
         self._change_active_procedures(procedures, action="deactivate")
 
-    def _change_active_procedures(self, procedures: list, action: str):
+    def _change_active_procedures(self, procedures: dict, action: str):
         """ Add/Remove procedures from the active list
 
         Args:
-            procedures: The names of the procedures to activate/deactivate.
+            procedures: The procedures to activate/deactivate.
             action: What to do with the procedures:
                 activate: They will be activated.
                 deactivate: They will be deactivated.
@@ -494,14 +501,14 @@ class ProcedureHandling():
                     self.log.info("Procedure %s is already active", proc)
                     continue
 
-                active_procedures.append(proc)
+                active_procedures[proc] = procedures[proc]
 
             if action == "deactivate":
                 if proc not in active_procedures:
                     self.log.info("Procedure %s is not active", proc)
                     continue
 
-                active_procedures.remove(proc)
+                del active_procedures[proc]
 
             self.log.info("Procedure to %s '%s'", action, proc)
 
@@ -509,7 +516,7 @@ class ProcedureHandling():
         self.confhandler.update_parameter(
             module="bids",
             parameter="active_procedures",
-            value=sorted(active_procedures)
+            value=active_procedures
         )
 
 
@@ -639,7 +646,7 @@ def configure_bids_conversion(project_dir):
             "bids": {
                 "type": "object",
                 "properties": {
-                    "active_procedures": {"type": "array"},
+                    "active_procedures": {"type": "object"},
                     "dataset_name": {"type": "string"},
                     "patches": {"type": "array"},
                     "default_procedure_dir": {"type": "string"},
@@ -714,20 +721,16 @@ class Switcher():
     Insead of checking each value manually the according Switcher method
     can be called. E.g.
     Use
-       getattr(Switcher, "proc_active"])()
+       getattr(Switcher, "proc_create"])()
     Instead of
-       if answers["procedure_select"] == choices["proc_active"]:
-           proc_handler.show_active_procedure()
+       if answers["procedure_select"] == choices["proc_create"]:
+           proc_handler.create_procedure(...)
 
     """
 
     def __init__(self, dataset_path, answers):
         self.proc_handler = ProcedureHandling(dataset_path)
         self.answers = answers
-
-    def proc_active(self):
-        """ Wrapper around ProcedureHandler """
-        self.proc_handler.show_active_procedure()
 
     def proc_create(self):
         """ Wrapper around ProcedureHandler """
@@ -758,10 +761,12 @@ class Switcher():
         active_procedures = self.proc_handler.get_active_procedures()
         available_procedures = self.proc_handler.get_available_procedures()
 
+        active_proc_names = list(active_procedures.keys())
+
         # determine defaults for choices
         choices = []
         for proc in sorted(available_procedures):
-            if proc in active_procedures:
+            if proc in active_proc_names:
                 choices.append(questionary.Choice(proc, checked=True))
             else:
                 choices.append(proc)
@@ -773,11 +778,24 @@ class Switcher():
         ).ask() or []
 
         # activate or deactivate accordingly
-        procs_to_activate = set(chosen_procs) - set(active_procedures)
+        procs_to_activate = set(chosen_procs) - set(active_proc_names)
         if procs_to_activate:
-            self.proc_handler.activate_procedures(procs_to_activate)
+            complete_procs = {}
+            for proc in procs_to_activate:
+                has_params = questionary.confirm(
+                    "Does procedure {} have parameter?".format(proc),
+                    default=False
+                ).ask()
 
-        procs_to_deactivate = set(active_procedures) - set(chosen_procs)
+                if has_params:
+                    parameters = questionary.text("Parameters:").ask()
+
+                complete_procs[proc] = {"parameters": parameters}
+
+            self.proc_handler.activate_procedures(complete_procs)
+
+        procs_to_deactivate = set(active_proc_names) - set(chosen_procs)
         if procs_to_deactivate:
-            self.proc_handler.deactivate_procedures(procs_to_deactivate)
-
+            complete_procs = {proc: active_procedures[proc]
+                              for proc in procs_to_deactivate}
+            self.proc_handler.deactivate_procedures(complete_procs)
