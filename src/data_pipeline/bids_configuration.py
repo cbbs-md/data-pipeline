@@ -150,11 +150,10 @@ class BidsConfiguration():
         self._create_studyspec(spec)
 
         # Clean up old bids convertion
-        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
+        bids_dir = self._get_bids_dir()
         if bids_dir.exists():
             self.log.info("Target directory %s for bids conversion already "
                           "exists. Remove and reuse it.", bids_dir)
-
             shutil.rmtree(bids_dir)
 
         self.log.info("Convert to BIDS based on study specification")
@@ -188,6 +187,13 @@ class BidsConfiguration():
             proc_spec = proc_spec.format(anon_subject=self.anon_subject)
             self.log.info("Execute procedure %s", proc_spec)
             datalad.run_procedure(proc_spec, dataset=self.dataset)
+
+        self._print_preview(bids_dir)
+
+    def _get_bids_dir(self):
+        return self.dataset_path/"sub-{}".format(self.anon_subject)
+
+    def _print_preview(self, bids_dir):
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
