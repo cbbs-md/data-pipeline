@@ -5,7 +5,7 @@ bids:
         # to refer to the current path of the data-pipeline source code
         - "{data_pipeline_path}/patches/hirni_heuristic.patch"
 
-    config_acquid: bids_rule_config
+    config_acqid: bids_rule_config
     # hirni will remove underscores form the anon_subject entry
     # e.g. bids_config -> bidsconfig
     config_anon_subject: bidsconfig
@@ -16,7 +16,7 @@ bids:
 
     rule_dir: code/costum_rules
     rule_name: custom_rules.py
-    rule_template: templates/cutom_rule_template.py
+    rule_template: templates/custom_rules_template.py
 
     validator_container_name: "bids-validator.simg"
     validator_image_url: "docker://bids/validator"

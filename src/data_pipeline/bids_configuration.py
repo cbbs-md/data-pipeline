@@ -95,18 +95,17 @@ class BidsConfiguration():
         # copy rule_base and rule template
         rules_to_copy = [
             # (source file name, target file name)
-            ("rules_base.py", "rules_base.py"),
+            ("templates/rules_base.py", "rules_base.py"),
             # use correct template, this is only for dev
-            # ("custom_rules.py", rule),
+            # ("templates/custom_rules.py", rule),
             (rule_template, rule),
         ]
 
         # TODO patch hirni and put rule_base inside of it
         for src_name, target_name in rules_to_copy:
-            target = Path(self.dataset_path, rule_dir, src_name)
+            target = Path(self.dataset_path, rule_dir, target_name)
             if not target.exists():
-                source = Path(Path(__file__).parent.absolute(),
-                              "templates", target_name)
+                source = Path(Path(__file__).parent.absolute(), src_name)
                 shutil.copy(source, target)
 
         # edit rule template
@@ -966,6 +965,8 @@ class ProcSwitcher():
 
                 if has_params:
                     parameters = questionary.text("Parameters:").ask()
+                else:
+                    parameters = ""
 
                 complete_procs[proc] = {"parameters": parameters}
 
