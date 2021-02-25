@@ -96,9 +96,9 @@ class BidsConfiguration():
         rules_to_copy = [
             # (source file name, target file name)
             ("rules_base.py", "rules_base.py"),
-            ("custom_rules.py", rule),
-            # TODO use correct template, this is only for dev
-            # (rule_template, rule),
+            # use correct template, this is only for dev
+            # ("custom_rules.py", rule),
+            (rule_template, rule),
         ]
 
         # TODO patch hirni and put rule_base inside of it
