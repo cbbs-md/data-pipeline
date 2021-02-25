@@ -131,7 +131,7 @@ class BidsConfiguration():
             for i in dicomseries_all:
                 f.write(json.dumps(i) + "\n")
 
-        datalad.save(path=self.spec_file, dataset = self.dataset,
+        datalad.save(path=self.spec_file, dataset=self.dataset,
                      message="Reset studyspec file")
 
     def generate_preview(self, active_procedures: dict):
@@ -283,9 +283,8 @@ class BidsConfiguration():
         if source_dir.exists():
             self.log.info("Remove %s", source_dir)
             # datalad remove bids_rule_config
-            datalad.remove(dataset=self.dataset_path, path=self.acqid)
-            utils.run_cmd(["rm", "-r", self.acqid], self.log,
-                          raise_exception=False)
+            datalad.remove(dataset=self.dataset_path, path=self.acqid,
+                           recursive=True, if_dirty="ignore")
 
             # cleanup submodule entry in git (bug in datalad)
             repo = git.Repo(self.dataset_path)
@@ -570,7 +569,7 @@ class BidsGitHandling(GitBase):
 
         with utils.ChangeWorkingDir(self.dataset_path):
             self.checkout_branch(self.config_branch,
-                                 rebase=self.starting_branch,
+                                 rebase_branch=self.starting_branch,
                                  do_create=True)
 
     def checkout_starting_branch(self):
