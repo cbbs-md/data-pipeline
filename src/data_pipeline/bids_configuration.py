@@ -123,6 +123,10 @@ class BidsConfiguration():
         next dataset: only rule)
         """
 
+        if not self.spec_file.exists():
+            # Nothing to do
+            return
+
         spec_list = utils.read_spec(self.spec_file)
         dicomseries_all = [i for i in spec_list
                            if i["type"] == "dicomseries:all"]
