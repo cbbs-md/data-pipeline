@@ -358,9 +358,6 @@ class ProcedureHandling():
             procedure_name: how the procedure should be called
         """
 
-        proc_dir = self.config["default_procedure_dir"]
-        proc_file = Path(proc_dir, procedure_name)
-
         # determine it from proc_type and template
         if procedure_type == "python":
             procedure_name += ".py"
@@ -371,6 +368,9 @@ class ProcedureHandling():
         else:
             self.log.exception("Procedure %s type is not supported",
                                procedure_type)
+
+        proc_dir = self.config["default_procedure_dir"]
+        proc_file = Path(proc_dir, procedure_name)
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
@@ -591,6 +591,7 @@ class BidsGitHandling(GitBase):
             super().stash(pop)
 
     def check_if_to_be_committed(self, path: str):
+        """ Check if a path has changed and should be committed """
         with utils.ChangeWorkingDir(self.dataset_path):
 
             if self.is_tracked(path):
@@ -603,8 +604,10 @@ class BidsGitHandling(GitBase):
             return False
 
     def commit(self):
+        """ Commit changes done during bids configuration """
+
         with utils.ChangeWorkingDir(self.dataset_path):
-            # ass config and hirni changes
+            # add config and hirni changes
             path = ".datalad/config"
             if self.check_if_to_be_committed(path):
                 datalad.save(
@@ -626,7 +629,6 @@ class BidsGitHandling(GitBase):
             if does_exist and self.check_if_to_be_committed(rule_file):
                 datalad.save(rule_file, dataset=self.dataset_path,
                              message="Add/modify custom rule", to_git=True)
-            #   message="Register and add custom rules to dataset configuration"
 
                 rule_base_file = Path(rule_file).with_name("rules_base.py")
                 if self.check_if_to_be_committed(rule_base_file):

@@ -54,8 +54,7 @@ class GitBase():
     def _run_cmd(self, cmd):
         return utils.run_cmd(cmd, self.log).rstrip()
 
-    @staticmethod
-    def stash(pop: bool = False):
+    def stash(self, pop: bool = False):
         """ Interact with stash
 
         Either puts the changes on the stash or pops them from the it.
