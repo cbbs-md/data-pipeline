@@ -46,18 +46,20 @@ class BidsConfiguration():
             tarball: path to tarball to import
         """
 
+        path = Path(tarball).expanduser().resolve()
+
         # datalad hirni-import-dcm --anon-subject "$ANON" \
         #   ../../original/sourcedata.tar.gz sourcedata
 
         self.log.info("Import %s: anon-subject=%s, aquisition=%s",
-                      tarball, self.anon_subject, self.acqid)
+                      path, self.anon_subject, self.acqid)
 
         # creates a subdataset <acqid> under sourcedata/dicoms
         datalad.hirni_import_dcm(
             dataset=self.dataset,
             anon_subject=self.anon_subject,
             # subject=
-            path=tarball,
+            path=path,
             acqid=self.acqid,
             # properties=
         )
