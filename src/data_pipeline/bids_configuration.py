@@ -603,43 +603,47 @@ class BidsGitHandling(GitBase):
             return False
 
     def commit(self):
-        # ass config and hirni changes
-        path = ".datalad/config"
-        if self.check_if_to_be_committed(path):
-            datalad.save(
-                path,
-                dataset=self.dataset_path,
-                message=("Modify datalad config for custom rule and "
-                            "procedures")
-            )
+        with utils.ChangeWorkingDir(self.dataset_path):
+            # ass config and hirni changes
+            path = ".datalad/config"
+            if self.check_if_to_be_committed(path):
+                datalad.save(
+                    path,
+                    dataset=self.dataset_path,
+                    message=("Modify datalad config for custom rule and "
+                             "procedures")
+                )
 
-        # add rule
-        try:
-            rule_file = self.determine_dir(section="datalad.hirni.dicom2spec",
-                                           option="rules")
-            does_exist = True
-        except Exception:
-            does_exist = False
+            # add rule
+            try:
+                rule_file = self.determine_dir(
+                    section="datalad.hirni.dicom2spec", option="rules"
+                )
+                does_exist = True
+            except Exception:
+                does_exist = False
 
-        if does_exist and self.check_if_to_be_committed(rule_file):
-            datalad.save(rule_file, dataset=self.dataset_path,
-                         message="Add/modify custom rule", to_git=True)
-        #   message="Register and add custom rules to dataset configuration"
+            if does_exist and self.check_if_to_be_committed(rule_file):
+                datalad.save(rule_file, dataset=self.dataset_path,
+                             message="Add/modify custom rule", to_git=True)
+            #   message="Register and add custom rules to dataset configuration"
 
-            rule_base_file = Path(rule_file).with_name("rules_base.py")
-            if self.check_if_to_be_committed(rule_base_file):
-                datalad.save(rule_base_file, dataset=self.dataset_path,
-                             message="Add rule_base file", to_git=True)
+                rule_base_file = Path(rule_file).with_name("rules_base.py")
+                if self.check_if_to_be_committed(rule_base_file):
+                    datalad.save(rule_base_file, dataset=self.dataset_path,
+                                 message="Add rule_base file", to_git=True)
 
-        # add procedures
-        try:
-            procedure_dir = self.determine_dir(section="datalad.locations",
-                                               option="dataset-procedures")
-        except Exception:
-            does_exist = False
-        if does_exist and self.check_if_to_be_committed(procedure_dir):
-            datalad.save(procedure_dir, dataset=self.dataset_path,
-                         message="Add procedures", to_git=True)
+            # add procedures
+            try:
+                procedure_dir = self.determine_dir(section="datalad.locations",
+                                                   option="dataset-procedures")
+            except Exception:
+                does_exist = False
+
+            if does_exist and self.check_if_to_be_committed(procedure_dir):
+                datalad.save(procedure_dir, dataset=self.dataset_path,
+                             message="Add procedures", to_git=True)
+                # TODO check what happens if one procedure is only modified
 
     def determine_dir(self, section: str, option: str) -> Union[str, Path]:
         """ Get dir from datalad config """
