@@ -19,10 +19,6 @@ from data_pipeline.config_handler import ConfigHandler
 from data_pipeline.git_handler import GitBase
 
 
-class NotPossible(Exception):
-    """ Raised when the requested action is not possible """
-
-
 class BidsConfiguration():
     """ Enables configuration of rules to for bids convertions """
 
@@ -419,7 +415,7 @@ class ProcedureHandling():
             if not overwrite:
                 msg = "Different procedure dir %s already registered."
                 self.log.error(msg, registered_dir)
-                raise NotPossible(msg, "")
+                raise utils.NotPossible(msg, "")
 
         config.set(section + "." + option, proc_dir, where="dataset")
 
@@ -441,7 +437,7 @@ class ProcedureHandling():
         # register procedure dir in datalad
         try:
             self._register_proc_dir(proc_dir)
-        except NotPossible:
+        except utils.NotPossible:
             self.log.error("Import of procedure not possible since default "
                            "procedure dir could not be registered")
             return
@@ -936,7 +932,7 @@ class ProcSwitcher():
             self.proc_handler.register_procedure_dir(
                 self.answers["procedure_dir"]
             )
-        except NotPossible:
+        except utils.NotPossible:
             if questionary.confirm("Overwrite?").ask():
                 self.proc_handler.register_procedure_dir(
                     self.answers["procedure_dir"],

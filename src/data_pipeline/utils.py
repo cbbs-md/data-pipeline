@@ -14,6 +14,10 @@ class ConfigError(Exception):
     """Raised when there are missing parameters in the configuration"""
 
 
+class NotPossible(Exception):
+    """ Raised when the requested action is not possible """
+
+
 def get_config(filename: str) -> dict:
     """ Read config from file.
 
