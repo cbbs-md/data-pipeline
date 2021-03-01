@@ -111,6 +111,8 @@ class BidsConfiguration():
         self.log.info("Opening %s", abs_rule_file)
         click.edit(filename=abs_rule_file)
 
+        self._create_studyspec()
+
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
 
@@ -135,6 +137,26 @@ class BidsConfiguration():
         datalad.save(path=self.spec_file, dataset=self.dataset,
                      message="Reset studyspec file")
 
+    def _create_studyspec(self):
+        self.log.info("Generate study specification file")
+
+        spec = self.spec_file.relative_to(self.dataset_path)
+
+        # Fix needed since dicom2spec only looks for rule file in current dir
+        # and not in dataset dir
+        with utils.ChangeWorkingDir(self.dataset_path):
+            # datalad hirni-dicom2spec -s bids_rule_config/studyspec.json \
+            #     bids_rule_config/dicoms
+            datalad.hirni_dicom2spec(
+                path=str(Path(self.acqid, "dicoms")),
+                spec=spec,
+                dataset=self.dataset,
+                # subject=
+                # anon_subject=
+                # acquisition=
+                # properties=
+            )
+
     def generate_preview(self, active_procedures: dict):
         """ Generade bids converion
 
@@ -144,9 +166,7 @@ class BidsConfiguration():
                 getting the event_files. Format is
                 {<proc_name>: {"parameters": <parameters>}, ...}
         """
-
         spec = self.spec_file.relative_to(self.dataset_path)
-        self._create_studyspec(spec)
 
         # Clean up old bids convertion
         bids_dir = self._get_bids_dir()
@@ -205,25 +225,6 @@ class BidsConfiguration():
 
         self.log.info("Preview:\n %s",
                       utils.show_side_by_side(src_tree, bids_tree))
-
-    def _create_studyspec(self, spec):
-
-        self.log.info("Generate study specification file")
-
-        # Fix needed since dicom2spec only looks for rule file in current dir
-        # and not in dataset dir
-        with utils.ChangeWorkingDir(self.dataset_path):
-            # datalad hirni-dicom2spec -s bids_rule_config/studyspec.json \
-            #     bids_rule_config/dicoms
-            datalad.hirni_dicom2spec(
-                path=str(Path(self.acqid, "dicoms")),
-                spec=spec,
-                dataset=self.dataset,
-                # subject=
-                # anon_subject=
-                # acquisition=
-                # properties=
-            )
 
     def run_bids_validator(self):
         """ Checks the dataset for bids conformity"""
