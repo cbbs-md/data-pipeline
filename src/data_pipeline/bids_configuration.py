@@ -161,15 +161,8 @@ class BidsConfiguration():
         # console output will be flooded -> sircument it by using the command
         # line interface
         with utils.ChangeWorkingDir(self.dataset_path):
-            utils.run_cmd(
-                [
-                    "datalad",
-                    "hirni-spec2bids",
-                    "--anonymize",
-                    spec
-                ],
-                self.log
-            )
+            cmd = ["datalad", "hirni-spec2bids", "--anonymize", spec]
+            utils.run_cmd(cmd, self.log)
 
         # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
 #        datalad.hirni_spec2bids(
