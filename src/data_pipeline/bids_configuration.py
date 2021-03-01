@@ -29,7 +29,7 @@ class BidsConfiguration():
         self.dataset = datalad.Dataset(self.dataset_path)
         # TODO replace with datalad require_dataset?
 
-        self.config = ConfigHandler.get_instance().get("bids")
+        self.config = ConfigHandler.get_instance().get("bids_conversion")
 
         self.acqid = self.config["config_acqid"]
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
@@ -304,7 +304,7 @@ class ProcedureHandling():
         self.dataset = datalad.Dataset(self.dataset_path)
 
         self.confhandler = ConfigHandler.get_instance()
-        self.config = self.confhandler.get("bids")
+        self.config = self.confhandler.get("bids_conversion")
 
         self.log = utils.get_logger(__class__)
 
@@ -476,7 +476,7 @@ class ProcedureHandling():
 
         # open config file and read procedures
         active_procedures = (
-            self.confhandler.get("bids").get("active_procedures", {})
+            self.confhandler.get("bids_converstion").get("active_procedures", {})
         )
 
         return active_procedures
@@ -538,7 +538,7 @@ class ProcedureHandling():
 
         # add and write back into config
         self.confhandler.update_parameter(
-            module="bids",
+            module="bids_conversion",
             parameter="active_procedures",
             value=active_procedures
         )
@@ -661,7 +661,7 @@ class BidsGitHandling(GitBase):
 def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
-    config = ConfigHandler.get_instance().get("bids")
+    config = ConfigHandler.get_instance().get("bids_conversion")
 
     choices = dict(
         import_data="Import data",
@@ -781,12 +781,34 @@ def configure_bids_conversion(project_dir):
     schema = {
         "type": "object",
         "properties": {
-            "bids": {
+            "bids_conversion": {
                 "type": "object",
                 "properties": {
                     "active_procedures": {"type": "object"},
-                    "dataset_name": {"type": "string"},
-                    "patches": {"type": "array"},
+                    "source": {
+                        "type": "object",
+                        "properties": {
+                            "dataset_name": {"type": "string"},
+                            "setup_procedure": {"type": "string"},
+                            "patches": {"type": "array"}
+                        },
+                        "required": [
+                            "dataset_name",
+                            "setup_procedure"
+                        ]
+                    },
+                    "bids": {
+                        "type": "object",
+                        "properties": {
+                            "dataset_name": {"type": "string"},
+                            "setup_procedure": {"type": "string"},
+                            "patches": {"type": "array"}
+                        },
+                        "required": [
+                            "dataset_name",
+                            "setup_procedure"
+                        ]
+                    },
                     "default_procedure_dir": {"type": "string"},
                     "procedure_python_template": {"type": "string"},
                     "procedure_shell_template": {"type": "string"},
@@ -800,7 +822,8 @@ def configure_bids_conversion(project_dir):
                     "config_anon_subject": {"type": "string"},
                 },
                 "required": [
-                    "dataset_name",
+                    "source",
+                    "bids",
                     "default_procedure_dir",
                     "procedure_python_template",
                     "procedure_shell_template",
@@ -815,11 +838,13 @@ def configure_bids_conversion(project_dir):
                 ]
             },
         },
-        "required": ["bids"]
+        "required": ["bids_conversion"]
     }
-    ConfigHandler.get_instance().add_schema("bids", schema)
+    config_handler = ConfigHandler.get_instance()
+    config_handler.add_schema("bids_conversion", schema)
+    config = config_handler.get("bids_conversion")
 
-    setup = SetupDatalad(project_dir)
+    setup = SetupDatalad(project_dir, config["source"])
     if not setup.dataset_path.exists():
         setup.run()
 

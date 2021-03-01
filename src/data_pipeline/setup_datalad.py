@@ -6,16 +6,20 @@ import datalad.api as datalad
 
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
-from data_pipeline.git_handler import GitBase
 
 
 class SetupDatalad():
     """ Set up a datalad dataset and preconfigure it"""
 
-    def __init__(self, project_dir):
+    def __init__(self, project_dir: Path, config: dict):
+        """
 
-        self.config = self._get_config()
-        self.dataset_name = self.config["dataset_name"]
+        Args:
+            dataset_path: Absolute path of the dataset
+        """
+
+        self.config = self._get_config(config)
+
         self.dataset_path = Path(project_dir,
                                  self.config["dataset_name"]).expanduser()
 
@@ -23,27 +27,25 @@ class SetupDatalad():
         self.dataset = None
 
     @staticmethod
-    def _get_config():
+    def _get_config(config):
 
         schema = {
             "type": "object",
             "properties": {
-                "bids": {
-                    "type": "object",
-                    "properties": {
-                        "dataset_name": {"type": "string"},
-                        "patches": {"type": "array"}
-                    },
-                    "required": ["dataset_name"]
-                },
+                "dataset_name": {"type": "string"},
+                "setup_procedure": {"type": "string"},
+                "patches": {"type": "array"}
             },
-            "required": ["bids"]
+            "required": ["dataset_name", "setup_procedure"]
         }
+        # TODO make setup_procedure optional
 
-        config_handler = ConfigHandler.get_instance()
-        config = ConfigHandler.get_instance().get()
-        config_handler.validate(config=config, schema=schema)
-        return config["bids"]
+        ConfigHandler.get_instance().validate(config=config, schema=schema)
+
+        # set default values for optional parameters
+        config["patches"] = config.get("patches", [])
+
+        return config
 
     def run(self):
         "Set up dataset to be used and apply patches"
@@ -56,7 +58,8 @@ class SetupDatalad():
 
         try:
             self.dataset = datalad.create(str(self.dataset_path))
-            datalad.run_procedure(spec="cfg_hirni", dataset=self.dataset)
+            datalad.run_procedure(spec=self.config["setup_procedure"],
+                                  dataset=self.dataset)
 
             self._apply_patches()
             # commit patches to hirni
@@ -75,8 +78,9 @@ class SetupDatalad():
             raise
 
     def _apply_patches(self):
-        # apply patches
-        patches = self.config.get("patches", [])
+
+        # for readability
+        patches = self.config["patches"]
 
         if not patches:
             self.log.debug("No patches to apply")
