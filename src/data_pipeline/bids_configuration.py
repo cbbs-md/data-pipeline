@@ -56,7 +56,7 @@ class BidsConfiguration():
         self._install_source_dataset(source_dataset)
 
         spec = [
-            #"sourcedata/studyspec.json",
+            # "sourcedata/studyspec.json",
             self.install_dataset_name/"studyspec.json",
             # "sourcedata/*/studyspec.json"
             self.install_dataset_name/self.acqid/"studyspec.json"
@@ -71,7 +71,7 @@ class BidsConfiguration():
 
         self.log.info("Convert to BIDS based on study specification")
 
-        # TODO check if heudiconv container already downloads, otherwise warn
+        # TODO check if heudiconv container already downloaded, otherwise warn
         # user that this might take some time
 
         # since logging can not be controlled when using the datalad api, the
@@ -133,8 +133,8 @@ class BidsConfiguration():
     def _print_preview(self, bids_dir):
 
         # imported data
-        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
-                            "sourcedata")
+        src_data_dir = Path(self.dataset_path, self.install_dataset_name,
+                            self.acqid, "dicoms", "sourcedata")
         src_tree = utils.run_cmd(
             ["tree", "-d", src_data_dir], self.log
         ).split("\n")
