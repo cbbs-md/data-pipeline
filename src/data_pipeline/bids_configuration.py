@@ -181,7 +181,7 @@ class BidsConfiguration():
 
         # singularity run --no-home --containall --bind $DIR_TO_CHECK:/data
         #     $CONTAINER_PATH /data
-        utils.run_cmd(
+        res = utils.run_cmd(
             [
                 "singularity", "run",
                 "--no-home",
@@ -190,8 +190,11 @@ class BidsConfiguration():
                 str(container_path), "/data"
             ],
             self.log,
-            raise_exception=False
+            raise_exception=False,
+            surpress_output=True
         )
+
+        self.log.info(res)
 
     def cleanup(self):
         """ cleanup generated bids data """
@@ -1085,3 +1088,5 @@ class ProcSwitcher():
             complete_procs = {proc: active_procedures[proc]
                               for proc in procs_to_deactivate}
             self.proc_handler.deactivate_procedures(complete_procs)
+
+        # TODO should a new procedure that is added automatically be active?
