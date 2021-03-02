@@ -62,15 +62,8 @@ class SetupDatalad():
                                   dataset=self.dataset)
 
             self._apply_patches()
-            # commit patches to hirni
-            hirni_path = self.dataset_path/"code"/"hirni-toolbox"
-            hirni_dataset = datalad.Dataset(hirni_path)
-            # commit inside the submodule
-            datalad.save(path=".", dataset=hirni_dataset,
-                         message="Patch hirni")
-            # commit in the main git repo
-            datalad.save(path=hirni_path, dataset=self.dataset,
-                         message="Patch hirni")
+
+            self._commit_hirni_patches()
 
         except Exception:
             self.log.error("Some error occurred", exc_info=True)
@@ -102,6 +95,22 @@ class SetupDatalad():
             # -i PATCHFILE Read patch from PATCHFILE instead of stdin.
 
             utils.run_cmd(cmd, self.log, error_message="Failed to apply patch")
+
+    def _commit_hirni_patches(self):
+        """ commit patches to hirni """
+
+        hirni_path = self.dataset_path/"code"/"hirni-toolbox"
+        if not hirni_path.exists():
+            return
+
+        # TODO check if there where changes at all
+
+        hirni_dataset = datalad.Dataset(hirni_path)
+        # commit inside the submodule
+        datalad.save(path=".", dataset=hirni_dataset, message="Patch hirni")
+        # commit in the main git repo
+        datalad.save(path=hirni_path, dataset=self.dataset,
+                     message="Patch hirni")
 
     def _remove_all(self):
         """ Removes the created dataset

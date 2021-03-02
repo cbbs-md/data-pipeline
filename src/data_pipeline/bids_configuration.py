@@ -32,6 +32,191 @@ class BidsConfiguration():
         self.config = ConfigHandler.get_instance().get("bids_conversion")
 
         self.acqid = self.config["config_acqid"]
+        self.anon_subject = self.config["config_anon_subject"]
+
+        # the name under which the source dataset should be installed inside
+        # the bids dataset
+        self.install_dataset_name = Path("sourcedata")
+
+    def generate_preview(self, source_dataset: str, active_procedures: dict):
+        """ Generade bids conversion and view the result
+
+        Generate bids and display a side by side comparison of the result to
+        the original data.
+
+        Args:
+            source_dataset: The path to the dataset to install from which bids
+                data should be generated
+            active_procedures: The procedures to execute in addition, including
+                the parameters to run them e.g. addtional procedures for
+                getting the event_files. Format is
+                {<proc_name>: {"parameters": <parameters>}, ...}
+        """
+
+        self._install_source_dataset(source_dataset)
+
+        spec = [
+            #"sourcedata/studyspec.json",
+            self.install_dataset_name/"studyspec.json",
+            # "sourcedata/*/studyspec.json"
+            self.install_dataset_name/self.acqid/"studyspec.json"
+        ]
+
+        # Clean up old bids convertion
+        bids_dir = self._get_bids_dir()
+        if bids_dir.exists():
+            self.log.info("Target directory %s for bids conversion already "
+                          "exists. Remove and reuse it.", bids_dir)
+            shutil.rmtree(bids_dir)
+
+        self.log.info("Convert to BIDS based on study specification")
+
+        # TODO check if heudiconv container already downloads, otherwise warn
+        # user that this might take some time
+
+        # since logging can not be controlled when using the datalad api, the
+        # console output will be flooded -> circument it by using the command
+        # line interface
+        with utils.ChangeWorkingDir(self.dataset_path):
+            cmd = ["datalad", "hirni-spec2bids", "--anonymize"] + spec
+            utils.run_cmd(cmd, self.log)
+
+        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
+#        datalad.hirni_spec2bids(
+#            specfile=spec,
+#            dataset=self.dataset,
+#            anonymize=True,
+#            # only_type=
+#        )
+
+        # run procedures
+        for procedure, values in active_procedures.items():
+            proc_spec = "{} {}".format(procedure, values["parameters"])
+            # replace {anon_subject}, ...
+            proc_spec = proc_spec.format(anon_subject=self.anon_subject)
+            self.log.info("Execute procedure %s", proc_spec)
+            datalad.run_procedure(proc_spec, dataset=self.dataset)
+
+        self._print_preview(bids_dir)
+
+    def _install_source_dataset(self, source_dataset: str):
+        """ Install the source dataset to be able to process it """
+
+        # TODO check if already installed
+
+        # using the command line interface since the datalad api behaves
+        # differently and is missing the activation of datalad-url
+        # Then the procedures of the subdataset are not found
+        with utils.ChangeWorkingDir(self.dataset_path):
+            cmd = ["datalad", "install",
+                   "--dataset", self.dataset_path,
+                   "--source", source_dataset,
+                   self.install_dataset_name,
+                   "--recursive"]
+            utils.run_cmd(cmd, self.log)
+
+        # without the ChangeWorkingDir the command does not operate inside of
+        # dataset_path
+#        with utils.ChangeWorkingDir(self.dataset_path):
+#            datalad.install(
+#                path=self.install_dataset_name,
+#                source=source_dataset,
+#                 dataset=self.dataset_path,
+#                # get_data=
+#                # description=
+#                recursive=True
+#            )
+
+    def _get_bids_dir(self):
+        return self.dataset_path/"sub-{}".format(self.anon_subject)
+
+    def _print_preview(self, bids_dir):
+
+        # imported data
+        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
+                            "sourcedata")
+        src_tree = utils.run_cmd(
+            ["tree", "-d", src_data_dir], self.log
+        ).split("\n")
+
+        # converted data
+        bids_tree = utils.run_cmd_piped(
+           [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
+        ).split("\n")
+
+        # Generate nice output
+        src_tree[0] = "source:"
+        bids_tree[0] = "result:"
+
+        self.log.info("Preview:\n %s",
+                      utils.show_side_by_side(src_tree, bids_tree))
+
+    def run_bids_validator(self):
+        """ Checks the dataset for bids conformity"""
+
+        name = self.config["validator_container_name"]
+        image_url = self.config["validator_image_url"]
+        container_dir = Path(self.config["container_dir"])
+        if not container_dir.is_absolute():
+            container_dir = Path(self.dataset_path, container_dir)
+
+        if not container_dir.exists():
+            container_dir.mkdir(parents=True)
+
+        container_path = Path(container_dir, name)
+        if not container_path.exists():
+            # modify environment only for exectued command and not whole
+            # process
+            environment = copy.deepcopy(os.environ)
+            environment["SINGULARITY_PULLFOLDER"] = str(container_dir)
+
+            utils.run_cmd(
+                [
+                    "singularity", "pull", "--name",
+                    name, image_url,
+                ],
+                self.log,
+                env=environment
+            )
+
+        # singularity run --no-home --containall --bind $DIR_TO_CHECK:/data
+        #     $CONTAINER_PATH /data
+        utils.run_cmd(
+            [
+                "singularity", "run",
+                "--no-home",
+                "--containall",
+                "--bind", "{}:/data".format(self.dataset_path),
+                str(container_path), "/data"
+            ],
+            self.log,
+            raise_exception=False
+        )
+
+    def cleanup(self):
+        """ cleanup generated bids data """
+
+        # uninstall sourcedata
+
+        bids_dir = self._get_bids_dir()
+        if bids_dir.exists():
+            self.log.info("Remove %s", bids_dir)
+            shutil.rmtree(bids_dir)
+
+
+class SourceConfiguration():
+    """ Enables configuration of rules to for bids convertions """
+
+    def __init__(self, dataset_path: Union[str, Path]):
+        self.dataset_path = Path(dataset_path)
+
+        self.log = utils.get_logger(__class__)  # type: ignore
+        self.dataset = datalad.Dataset(self.dataset_path)
+        # TODO replace with datalad require_dataset?
+
+        self.config = ConfigHandler.get_instance().get("bids_conversion")
+
+        self.acqid = self.config["config_acqid"]
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
         self.anon_subject = self.config["config_anon_subject"]
 
@@ -157,117 +342,6 @@ class BidsConfiguration():
                 # properties=
             )
 
-    def generate_preview(self, active_procedures: dict):
-        """ Generade bids converion
-
-        Args:
-            active_procedures: The procedures to execute in addition, including
-                the parameters to run them e.g. addtional procedures for
-                getting the event_files. Format is
-                {<proc_name>: {"parameters": <parameters>}, ...}
-        """
-        spec = self.spec_file.relative_to(self.dataset_path)
-
-        # Clean up old bids convertion
-        bids_dir = self._get_bids_dir()
-        if bids_dir.exists():
-            self.log.info("Target directory %s for bids conversion already "
-                          "exists. Remove and reuse it.", bids_dir)
-            shutil.rmtree(bids_dir)
-
-        self.log.info("Convert to BIDS based on study specification")
-
-        # since logging can not be controlled when using the datalad api, the
-        # console output will be flooded -> sircument it by using the command
-        # line interface
-        with utils.ChangeWorkingDir(self.dataset_path):
-            cmd = ["datalad", "hirni-spec2bids", "--anonymize", spec]
-            utils.run_cmd(cmd, self.log)
-
-        # datalad hirni-spec2bids --anonymize sourcedata/studyspec.json
-#        datalad.hirni_spec2bids(
-#            specfile=spec,
-#            dataset=self.dataset,
-#            anonymize=True,
-#            # only_type=
-#        )
-
-        # run procedures
-        for procedure, values in active_procedures.items():
-            proc_spec = "{} {}".format(procedure, values["parameters"])
-            # replace {anon_subject}, ...
-            proc_spec = proc_spec.format(anon_subject=self.anon_subject)
-            self.log.info("Execute procedure %s", proc_spec)
-            datalad.run_procedure(proc_spec, dataset=self.dataset)
-
-        self._print_preview(bids_dir)
-
-    def _get_bids_dir(self):
-        return self.dataset_path/"sub-{}".format(self.anon_subject)
-
-    def _print_preview(self, bids_dir):
-
-        # imported data
-        src_data_dir = Path(self.dataset_path, self.acqid, "dicoms",
-                            "sourcedata")
-        src_tree = utils.run_cmd(
-            ["tree", "-d", src_data_dir], self.log
-        ).split("\n")
-
-        # converted data
-        bids_tree = utils.run_cmd_piped(
-           [["tree", bids_dir], ["sed", "s/-> .*//"]], self.log
-        ).split("\n")
-
-        # Generate nice output
-        src_tree[0] = "source:"
-        bids_tree[0] = "result:"
-
-        self.log.info("Preview:\n %s",
-                      utils.show_side_by_side(src_tree, bids_tree))
-
-    def run_bids_validator(self):
-        """ Checks the dataset for bids conformity"""
-
-        name = self.config["validator_container_name"]
-        image_url = self.config["validator_image_url"]
-        container_dir = Path(self.config["container_dir"])
-        if not container_dir.is_absolute():
-            container_dir = Path(self.dataset_path, container_dir)
-
-        if not container_dir.exists():
-            container_dir.mkdir()
-
-        container_path = Path(container_dir, name)
-        if not container_path.exists():
-            # modify environment only for exectued command and not whole
-            # process
-            environment = copy.deepcopy(os.environ)
-            environment["SINGULARITY_PULLFOLDER"] = str(container_dir)
-
-            utils.run_cmd(
-                [
-                    "singularity", "pull", "--name",
-                    name, image_url,
-                ],
-                self.log,
-                env=environment
-            )
-
-        # singularity run --no-home --containall --bind $DIR_TO_CHECK:/data
-        #     $CONTAINER_PATH /data
-        utils.run_cmd(
-            [
-                "singularity", "run",
-                "--no-home",
-                "--containall",
-                "--bind", "{}:/data".format(self.dataset_path),
-                str(container_path), "/data"
-            ],
-            self.log,
-            raise_exception=False
-        )
-
     def cleanup(self, git_repo):
         """ Cleanup the configuration data
 
@@ -285,12 +359,6 @@ class BidsConfiguration():
             repo = git.Repo(self.dataset_path)
             with repo.config_writer() as writer:
                 writer.remove_section('submodule "bids_rule_config/dicoms"')
-
-        # cleanup generated bids data
-        bids_dir = self.dataset_path/"sub-{}".format(self.anon_subject)
-        if bids_dir.exists():
-            self.log.info("Remove %s", bids_dir)
-            shutil.rmtree(bids_dir)
 
         git_repo.checkout_starting_branch()
         git_repo.remove_config_branch()
@@ -476,7 +544,8 @@ class ProcedureHandling():
 
         # open config file and read procedures
         active_procedures = (
-            self.confhandler.get("bids_converstion").get("active_procedures", {})
+            self.confhandler.get("bids_conversion")
+            .get("active_procedures", {})
         )
 
         return active_procedures
@@ -844,11 +913,17 @@ def configure_bids_conversion(project_dir):
     config_handler.add_schema("bids_conversion", schema)
     config = config_handler.get("bids_conversion")
 
-    setup = SetupDatalad(project_dir, config["source"])
-    if not setup.dataset_path.exists():
-        setup.run()
+    # create source dataset
+    source_setup = SetupDatalad(project_dir, config["source"])
+    if not source_setup.dataset_path.exists():
+        source_setup.run()
 
-    repo = BidsGitHandling(setup.dataset_path)
+    # create bids dataset
+    bids_setup = SetupDatalad(project_dir, config["bids"])
+    if not bids_setup.dataset_path.exists():
+        bids_setup.run()
+
+    repo = BidsGitHandling(source_setup.dataset_path)
     repo.checkout_config_branch()
 
     try:
@@ -857,7 +932,9 @@ def configure_bids_conversion(project_dir):
             if not answers or answers["step_select"] == "Exit":
                 break
 
-            switch = StepSwitcher(setup.dataset_path, choices, answers, repo)
+            switch = StepSwitcher(source_setup.dataset_path,
+                                  bids_setup.dataset_path,
+                                  choices, answers, repo)
             choices_reverted = {v: k for k, v in choices.items()}
             getattr(switch, choices_reverted[answers["step_select"]])()
     finally:
@@ -879,43 +956,48 @@ class StepSwitcher():
            ...
     """
 
-    def __init__(self, dataset_path, choices, answers, git_repo):
-        self.dataset_path = dataset_path
+    def __init__(self, source_dataset_path, bids_dataset_path,
+                 choices, answers, git_repo):
+        self.source_dataset_path = source_dataset_path
         self.choices = choices
         self.answers = answers
         self.git_repo = git_repo
-        self.conv = BidsConfiguration(self.dataset_path)
+        self.src_conf = SourceConfiguration(self.source_dataset_path)
+        self.bids_conf = BidsConfiguration(bids_dataset_path)
 
     def import_data(self):
         """ Create dataset and import data"""
-        self.conv.import_data(tarball=self.answers["data_path"])
+        self.src_conf.import_data(tarball=self.answers["data_path"])
 
     def register_rule(self):
         """ Wrapper around BidsConfiguration"""
-        self.conv.register_rule()
+        self.src_conf.register_rule()
 
     def add_procedure(self):
         """ Handle all procedure relevant answers"""
         if self.answers["procedure_select"] == "Return":
             return
 
-        switch = ProcSwitcher(self.dataset_path, self.answers)
+        switch = ProcSwitcher(self.source_dataset_path, self.answers)
         choices_reverted = {v: k for k, v in self.choices.items()}
         getattr(switch, choices_reverted[self.answers["procedure_select"]])()
 
     def preview(self):
         """ Wrapper around BidsConfiguration """
-        proc_handler = ProcedureHandling(self.dataset_path)
+        proc_handler = ProcedureHandling(self.source_dataset_path)
         active_procedures = proc_handler.get_active_procedures()
-        self.conv.generate_preview(active_procedures)
+        self.bids_conf.generate_preview(
+            source_dataset=self.src_conf.dataset_path,
+            active_procedures=active_procedures
+        )
 
     def check(self):
         """ Wrapper around BidsConfiguration """
-        self.conv.run_bids_validator()
+        self.bids_conf.run_bids_validator()
 
     def cleanup(self):
         """ Wrapper around BidsConfiguration """
-        self.conv.cleanup(self.git_repo)
+        self.src_conf.cleanup(self.git_repo)
 
 
 class ProcSwitcher():
