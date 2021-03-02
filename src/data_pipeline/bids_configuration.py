@@ -102,7 +102,7 @@ class BidsConfiguration():
     def _install_source_dataset(self, source_dataset: str):
         """ Install the source dataset to be able to process it """
 
-        # TODO check if already installed
+        # TODO check if already installed and if so update it
 
         # using the command line interface since the datalad api behaves
         # differently and is missing the activation of datalad-url
@@ -986,6 +986,13 @@ class StepSwitcher():
 
     def preview(self):
         """ Wrapper around BidsConfiguration """
+
+        # make sure that changes are committed
+        self.git_repo.checkout_starting_branch()
+        # commit changes in .datalad/config, rules, procedures
+        self.git_repo.commit()
+        self.git_repo.checkout_config_branch()
+
         proc_handler = ProcedureHandling(self.source_dataset_path)
         active_procedures = proc_handler.get_active_procedures()
         self.bids_conf.generate_preview(
