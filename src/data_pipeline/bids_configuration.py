@@ -286,10 +286,10 @@ class SourceConfiguration():
 
         # TODO patch hirni and put rule_base inside of it
         for src_name, target_name in rules_to_copy:
-            target = Path(self.dataset_path, rule_dir, target_name)
-            if not target.exists():
-                source = Path(Path(__file__).parent.absolute(), src_name)
-                shutil.copy(source, target)
+            utils.copy_template(
+                template=src_name,
+                target=Path(self.dataset_path, rule_dir, target_name)
+            )
 
         # edit rule template
         abs_rule_file = Path(self.dataset_path, rule_file)
@@ -440,9 +440,8 @@ class ProcedureHandling():
 
         # copy template
         target = Path(self.dataset_path, proc_file)
-        if not target.exists():
-            source = Path(Path(__file__).parent.absolute(), procedure_template)
-            shutil.copy(source, target)
+        utils.copy_template(template=procedure_template,
+                            target=target)
 
         # edit procedure template
         self.log.info("Opening %s", target)

@@ -5,6 +5,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import shutil
 import subprocess
 from typing import Union
 import yaml
@@ -121,6 +122,26 @@ def read_spec(file_name: Union[str, Path]) -> list:
     # strip: file may contain empty lines
     lines = file_name.read_text().strip().split("\n")
     return list(map(json.loads, lines))
+
+
+def copy_template(template: Union[str, Path], target: Union[str, Path]):
+    """ Copies the template file to the target path
+
+    Args:
+        template: The path of the template file. Can be either absolute or
+            relative inside the current toolbox
+        target: The file path where the template should be copied to. If the
+            target file does already exist it is not overwritten.
+    """
+    template = Path(template)
+    target = Path(target)
+
+    if not target.exists():
+        # account for relative paths for template file
+        if not template.is_absolute():
+            template = Path(__file__).parent.absolute()/template
+
+        shutil.copy(template, target)
 
 
 class ChangeWorkingDir(contextlib.ContextDecorator):
