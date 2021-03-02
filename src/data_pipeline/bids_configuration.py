@@ -163,6 +163,12 @@ class BidsConfiguration():
         if not container_dir.exists():
             container_dir.mkdir(parents=True)
 
+        # if no .bids-validator-config.json file exists create it
+        utils.copy_template(
+            template=Path(self.config["validator_config_template"]),
+            target=self.dataset_path/".bids-validator-config.json"
+        )
+
         container_path = Path(container_dir, name)
         if not container_path.exists():
             # modify environment only for exectued command and not whole
@@ -170,14 +176,8 @@ class BidsConfiguration():
             environment = copy.deepcopy(os.environ)
             environment["SINGULARITY_PULLFOLDER"] = str(container_dir)
 
-            utils.run_cmd(
-                [
-                    "singularity", "pull", "--name",
-                    name, image_url,
-                ],
-                self.log,
-                env=environment
-            )
+            cmd = ["singularity", "pull", "--name", name, image_url]
+            utils.run_cmd(cmd, self.log, env=environment)
 
         # singularity run --no-home --containall --bind $DIR_TO_CHECK:/data
         #     $CONTAINER_PATH /data

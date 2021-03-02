@@ -1,0 +1,7 @@
+{
+	"ignoredFiles":[
+        "/code/containers/**",
+        "/sourcedata/**"
+    ],
+    "ignore": ["TOO_FEW_AUTHORS"]
+}

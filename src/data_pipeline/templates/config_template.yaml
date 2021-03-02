@@ -28,6 +28,7 @@ bids_conversion:
 
     validator_container_name: "bids-validator.simg"
     validator_image_url: "docker://bids/validator"
+    validator_config_template: templates/bids-validator-config_template.json
     container_dir: "code/containers"
 
 rsync:
