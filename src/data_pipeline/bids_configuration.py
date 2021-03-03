@@ -37,6 +37,8 @@ class BidsConfiguration():
         # the name under which the source dataset should be installed inside
         # the bids dataset
         self.install_dataset_name = Path("sourcedata")
+        self.install_dataset_path = Path(self.dataset_path,
+                                         self.install_dataset_name)
 
     def generate_preview(self, source_dataset: str, active_procedures: dict):
         """ Generade bids conversion and view the result
@@ -102,7 +104,8 @@ class BidsConfiguration():
     def _install_source_dataset(self, source_dataset: str):
         """ Install the source dataset to be able to process it """
 
-        if Path(self.dataset_path, self.install_dataset_name).exists():
+        is_not_empty = any(self.install_dataset_path.iterdir())
+        if self.install_dataset_path.exists() and is_not_empty:
             self.log.info("Source dataset already installed, update it.")
             datalad.update(
                 self.install_dataset_name,
@@ -207,8 +210,17 @@ class BidsConfiguration():
     def cleanup(self):
         """ cleanup generated bids data """
 
-        # TODO uninstall sourcedata
+        # uninstall sourcedata
+        # without the ChangeWorkingDir the command does not operate inside of
+        # dataset_path
+        with utils.ChangeWorkingDir(self.dataset_path):
+            datalad.uninstall(
+                path=self.install_dataset_name,
+                dataset=self.dataset_path,
+                recursive=True
+            )
 
+        # remove bids conversion
         bids_dir = self._get_bids_dir()
         if bids_dir.exists():
             self.log.info("Remove %s", bids_dir)
@@ -1020,6 +1032,7 @@ class StepSwitcher():
     def cleanup(self):
         """ Wrapper around BidsConfiguration """
         self.src_conf.cleanup(self.git_repo)
+        self.bids_conf.cleanup()
 
 
 class ProcSwitcher():
