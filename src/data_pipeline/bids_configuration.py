@@ -102,7 +102,15 @@ class BidsConfiguration():
     def _install_source_dataset(self, source_dataset: str):
         """ Install the source dataset to be able to process it """
 
-        # TODO check if already installed and if so update it
+        if Path(self.dataset_path, self.install_dataset_name).exists():
+            self.log.info("Source dataset already installed, update it.")
+            datalad.update(
+                self.install_dataset_name,
+                merge=True,
+                dataset=self.dataset_path,
+                recursive=True
+            )
+            return
 
         # using the command line interface since the datalad api behaves
         # differently and is missing the activation of datalad-url
@@ -199,7 +207,7 @@ class BidsConfiguration():
     def cleanup(self):
         """ cleanup generated bids data """
 
-        # uninstall sourcedata
+        # TODO uninstall sourcedata
 
         bids_dir = self._get_bids_dir()
         if bids_dir.exists():
