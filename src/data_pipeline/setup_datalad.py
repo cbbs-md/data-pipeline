@@ -20,7 +20,8 @@ class SetupDatalad():
 
         self.config = self._get_config(config)
 
-        self.dataset_path = Path(project_dir,
+        self.project_dir = project_dir
+        self.dataset_path = Path(self.project_dir,
                                  self.config["dataset_name"]).expanduser()
 
         self.log = utils.get_logger(__class__)
@@ -54,12 +55,27 @@ class SetupDatalad():
             raise Exception("ERROR: dataset under {} already exists"
                             .format(self.dataset_path))
 
-        self.log.info("Run datalad setup")
+        self.log.info("Create dataset %s", self.dataset_path)
 
         try:
-            self.dataset = datalad.create(str(self.dataset_path))
-            datalad.run_procedure(spec=self.config["setup_procedure"],
-                                  dataset=self.dataset)
+            prefix = "cfg_"
+            proc = self.config["setup_procedure"]
+            proc = proc[len(prefix):] if proc.startswith(prefix) else proc
+            with utils.ChangeWorkingDir(self.project_dir):
+                utils.check_cmd(
+                    ["datalad", "create",
+                     "-c", proc,
+                     self.dataset_path]
+                )
+            self.dataset = datalad.Dataset(self.dataset_path)
+
+            # IMPORTANT: name of the procedure differs depending if it is an
+            # argument for create or used in run_procedure:
+            # create and command line use: hirni
+            # run_procedure use full name: cfg_hirni
+            #self.dataset = datalad.create(str(self.dataset_path))
+            #datalad.run_procedure(spec=self.config["setup_procedure"],
+            #                      dataset=self.dataset)
 
             self._apply_patches()
 
