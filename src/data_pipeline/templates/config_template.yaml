@@ -6,12 +6,15 @@ bids_conversion:
             # Either the full path to the patch or use {data_pipeline_path}
             # to refer to the current path of the data-pipeline source code
             - "{data_pipeline_path}/patches/hirni_heuristic.patch"
+        # Adds a gitignore file with the most commen defaults into the datasets
+        add_gitignore: true
     bids:
         dataset_name: bids
         setup_procedure: cfg_bids
 #        patches:
 #            # Either the full path to the patch or use {data_pipeline_path}
 #            # to refer to the current path of the data-pipeline source code
+        add_gitignore: true
 
     config_acqid: bids_rule_config
     # hirni will remove underscores form the anon_subject entry

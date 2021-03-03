@@ -27,6 +27,8 @@ class SetupDatalad():
         self.log = utils.get_logger(__class__)
         self.dataset = None
 
+        self.gitignore_template = "templates/gitignore_template"
+
     @staticmethod
     def _get_config(config):
 
@@ -35,7 +37,8 @@ class SetupDatalad():
             "properties": {
                 "dataset_name": {"type": "string"},
                 "setup_procedure": {"type": "string"},
-                "patches": {"type": "array"}
+                "patches": {"type": "array"},
+                "add_gitignore": {"type": "boolean"}
             },
             "required": ["dataset_name", "setup_procedure"]
         }
@@ -45,6 +48,7 @@ class SetupDatalad():
 
         # set default values for optional parameters
         config["patches"] = config.get("patches", [])
+        config["add_gitignore"] = config.get("add_gitignore", False)
 
         return config
 
@@ -73,11 +77,15 @@ class SetupDatalad():
             # argument for create or used in run_procedure:
             # create and command line use: hirni
             # run_procedure use full name: cfg_hirni
-            #self.dataset = datalad.create(str(self.dataset_path))
-            #datalad.run_procedure(spec=self.config["setup_procedure"],
-            #                      dataset=self.dataset)
+            # self.dataset = datalad.create(str(self.dataset_path))
+            # datalad.run_procedure(spec=self.config["setup_procedure"],
+            #                       dataset=self.dataset)
 
             self._apply_patches()
+
+            if self.config["add_gitignore"]:
+                utils.copy_template(template=self.gitignore_template,
+                                    target=self.dataset_path/".gitignore")
 
             self._commit_hirni_patches()
 
