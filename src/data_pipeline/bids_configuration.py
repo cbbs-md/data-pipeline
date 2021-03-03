@@ -62,7 +62,7 @@ class BidsConfiguration():
             self.install_dataset_name/self.acqid/"studyspec.json"
         ]
 
-        # Clean up old bids convertion
+        # Clean up old bids conversion
         bids_dir = self._get_bids_dir()
         if bids_dir.exists():
             self.log.info("Target directory %s for bids conversion already "
@@ -312,9 +312,12 @@ class SourceConfiguration():
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
 
+        If the studyspec is not reset the result of rule applications is not
+        deterministic:
+        this dataset: default spec merged with rule
+        next dataset: only rule
+
         dicomseries:all entry is needed for hirni to convert data properly
-        (this dataset: default spec merged with rule,
-        next dataset: only rule)
         """
 
         if not self.spec_file.exists():
@@ -823,7 +826,8 @@ def _ask_questions() -> Tuple[dict, dict]:
             "name": "procedure_name",
             "message": "How should the procedure be called?",
             "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_create"]),
+                     and x["procedure_select"] == choices["proc_create"]
+                     and x["procedure_type"] != "Return"),
         },
         {
             "type": "path",
@@ -985,7 +989,8 @@ class StepSwitcher():
 
     def add_procedure(self):
         """ Handle all procedure relevant answers"""
-        if self.answers["procedure_select"] == "Return":
+        if any(self.answers.get(key, None) == "Return"
+               for key in ["procedure_select", "procedure_type"]):
             return
 
         switch = ProcSwitcher(self.source_dataset_path, self.answers)
