@@ -10,7 +10,6 @@ from typing import Tuple, Union
 
 import click
 import datalad.api as datalad
-import git
 import questionary
 
 from data_pipeline.setup_datalad import SetupDatalad
@@ -385,11 +384,6 @@ class SourceConfiguration():
             # datalad remove bids_rule_config
             datalad.remove(dataset=self.dataset_path, path=self.acqid,
                            recursive=True, if_dirty="ignore")
-
-            # cleanup submodule entry in git (bug in datalad)
-            repo = git.Repo(self.dataset_path)
-            with repo.config_writer() as writer:
-                writer.remove_section('submodule "bids_rule_config/dicoms"')
 
         git_repo.checkout_starting_branch()
         git_repo.remove_config_branch()

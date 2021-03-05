@@ -114,5 +114,5 @@ class GitBase():
         Args:
             branch: The branch to remove
         """
-        cmd = ["git", "branch", "-d", branch]
+        cmd = ["git", "branch", "-D", branch]
         utils.check_cmd(cmd)
