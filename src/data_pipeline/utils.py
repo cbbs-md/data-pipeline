@@ -124,14 +124,18 @@ def read_spec(file_name: Union[str, Path]) -> list:
     return list(map(json.loads, lines))
 
 
-def copy_template(template: Union[str, Path], target: Union[str, Path]):
+def copy_template(template: Union[str, Path], target: Union[str, Path],
+                  this_file_path: Path = Path(__file__)):
     """ Copies the template file to the target path
 
     Args:
         template: The path of the template file. Can be either absolute or
-            relative inside the current toolbox
+            relative inside the current toolbox.
         target: The file path where the template should be copied to. If the
             target file does already exist it is not overwritten.
+        this_file_path: Optional; The path of the file in which this function
+            was called. In case the template dir is in a differnent path than
+            utils.
     """
     template = Path(template)
     target = Path(target)
@@ -139,7 +143,7 @@ def copy_template(template: Union[str, Path], target: Union[str, Path]):
     if not target.exists():
         # account for relative paths for template file
         if not template.is_absolute():
-            template = Path(__file__).parent.absolute()/template
+            template = this_file_path.parent.absolute()/template
 
         shutil.copy(template, target)
 

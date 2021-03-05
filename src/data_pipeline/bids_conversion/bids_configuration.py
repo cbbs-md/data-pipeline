@@ -181,7 +181,9 @@ class BidsConfiguration():
         # if no .bids-validator-config.json file exists create it
         utils.copy_template(
             template=Path(self.config["validator_config_template"]),
-            target=self.dataset_path/".bids-validator-config.json"
+            target=self.dataset_path/".bids-validator-config.json",
+            # use template dir inside of bids_conversion
+            this_file_path=Path(__file__)
         )
 
         container_path = Path(container_dir, name)
@@ -282,7 +284,7 @@ class SourceConfiguration():
         # TODO get these from config
         rule_dir = Path(self.config["rule_dir"])
         rule = self.config["rule_name"]
-        rule_template = self.config["rule_template"]
+        rule_template = Path(self.config["rule_template"])
 
         rule_file = Path(rule_dir, rule)
 
@@ -310,8 +312,6 @@ class SourceConfiguration():
         rules_to_copy = [
             # (source file name, target file name)
             ("templates/rules_base.py", "rules_base.py"),
-            # use correct template, this is only for dev
-            # ("templates/custom_rules.py", rule),
             (rule_template, rule),
         ]
 
@@ -319,7 +319,9 @@ class SourceConfiguration():
         for src_name, target_name in rules_to_copy:
             utils.copy_template(
                 template=src_name,
-                target=Path(self.dataset_path, rule_dir, target_name)
+                target=Path(self.dataset_path, rule_dir, target_name),
+                # use template dir inside of bids_conversion
+                this_file_path=Path(__file__)
             )
 
         # edit rule template
@@ -469,8 +471,12 @@ class ProcedureHandling():
 
         # copy template
         target = Path(self.dataset_path, proc_file)
-        utils.copy_template(template=procedure_template,
-                            target=target)
+        utils.copy_template(
+            template=procedure_template,
+            target=target,
+            # use template dir inside of bids_conversion
+            this_file_path=Path(__file__)
+        )
 
         # edit procedure template
         self.log.info("Opening %s", target)
