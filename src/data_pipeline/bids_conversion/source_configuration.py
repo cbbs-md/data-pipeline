@@ -192,7 +192,7 @@ class SourceConfiguration():
 class ProcedureHandling():
     """ Handles everything concerning procedures """
 
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path: Union[str, Path]):
         self.dataset_path = dataset_path
         self.dataset = datalad.Dataset(self.dataset_path)
 
@@ -309,7 +309,8 @@ class ProcedureHandling():
 
         config.set(section + "." + option, proc_dir, where="dataset")
 
-    def import_procedure(self, procedure_path: str, procedure_file_name):
+    def import_procedure(self, procedure_path: Union[str, Path],
+                         procedure_file_name):
         """ Imports a file into the procedure dir
 
         Args:
@@ -331,6 +332,9 @@ class ProcedureHandling():
             self.log.error("Import of procedure not possible since default "
                            "procedure dir could not be registered")
             return
+
+        # handle "~/" paths
+        procedure_path = Path(procedure_path).expanduser().resolve()
 
         # copy file into procedure dir
         proc_type = Path(procedure_path).suffix
