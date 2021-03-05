@@ -62,8 +62,10 @@ def _setup_logging(project):
 @click.option("--project", type=str, default=Path.cwd(),
               help="Choose the project directory")
 @click.option("--configure", is_flag=True,
-              help="Prepares and configure the bids convesion")
-def main(setup, project, configure):
+              help="Prepares and configure the BIDS conversion")
+@click.option("--run", is_flag=True,
+              help="Run the BIDS conversion")
+def main(setup, project, configure, run):
     """ Execute data-pipeline """
 
     # also relative paths like ../<my_project_dir> are allowed
@@ -93,6 +95,9 @@ def main(setup, project, configure):
 
     if configure:
         bids_conversion.configure(project)
+
+    if run:
+        bids_conversion.run()
 
 
 if __name__ == "__main__":

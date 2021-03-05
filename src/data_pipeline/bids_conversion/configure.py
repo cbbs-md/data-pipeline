@@ -1,4 +1,4 @@
-""" Converts tar ball into bids compatible dataset using datalad and hirni"""
+""" Configure BIDS conversion """
 
 from pathlib import Path
 from typing import Tuple
@@ -6,7 +6,6 @@ from typing import Tuple
 import questionary
 
 from data_pipeline.setup_datalad import SetupDatalad
-import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
 from .source_configuration import (
     SourceConfiguration, BidsGitHandling, ProcedureHandling
@@ -15,7 +14,7 @@ from .bids_configuration import BidsConfiguration
 
 
 def configure(project_dir):
-    """ Sets up a datalad dataset and prepares the convesion """
+    """ Sets up a datalad dataset and prepares the conversion """
 
     schema = {
         "type": "object",
@@ -115,8 +114,6 @@ def configure(project_dir):
 
 def _ask_questions() -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
-
-    config = ConfigHandler.get_instance().get("bids_conversion")
 
     choices = dict(
         import_data="Import data",
