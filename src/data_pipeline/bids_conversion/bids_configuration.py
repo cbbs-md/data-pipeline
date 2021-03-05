@@ -102,16 +102,17 @@ class BidsConfiguration():
     def _install_source_dataset(self, source_dataset: str):
         """ Install the source dataset to be able to process it """
 
-        is_not_empty = any(self.install_dataset_path.iterdir())
-        if self.install_dataset_path.exists() and is_not_empty:
-            self.log.info("Source dataset already installed, update it.")
-            datalad.update(
-                self.install_dataset_name,
-                merge=True,
-                dataset=self.dataset_path,
-                recursive=True
-            )
-            return
+        if self.install_dataset_path.exists():
+            is_not_empty = any(self.install_dataset_path.iterdir())
+            if is_not_empty:
+                self.log.info("Source dataset already installed, update it.")
+                datalad.update(
+                    self.install_dataset_name,
+                    merge=True,
+                    dataset=self.dataset_path,
+                    recursive=True
+                )
+                return
 
         # using the command line interface since the datalad api behaves
         # differently and is missing the activation of datalad-url
