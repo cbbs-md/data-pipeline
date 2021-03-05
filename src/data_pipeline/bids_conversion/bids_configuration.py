@@ -873,7 +873,7 @@ def _ask_questions() -> Tuple[dict, dict]:
     return questionary.prompt(questions), choices
 
 
-def configure_bids_conversion(project_dir):
+def configure(project_dir):
     """ Sets up a datalad dataset and prepares the convesion """
 
     schema = {

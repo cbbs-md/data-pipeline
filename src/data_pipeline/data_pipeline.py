@@ -6,7 +6,7 @@ import sys
 
 import click
 
-from data_pipeline.bids_conversion.bids_configuration import configure_bids_conversion
+import data_pipeline.bids_conversion as bids_conversion
 from data_pipeline.config_handler import ConfigHandler
 
 
@@ -92,7 +92,7 @@ def main(setup, project, configure):
     ConfigHandler(config_file=config_path)
 
     if configure:
-        configure_bids_conversion(project)
+        bids_conversion.configure(project)
 
 
 if __name__ == "__main__":
