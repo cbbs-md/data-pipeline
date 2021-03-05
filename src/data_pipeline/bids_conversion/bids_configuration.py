@@ -51,7 +51,7 @@ class BidsConfiguration():
         self._install_source_dataset(source_dataset)
 
         # check if data was imported
-        if not (self.install_dataset_path/self.anon_subject).exists():
+        if not (self.install_dataset_path/self.acqid).exists():
             self.log.warning("No dataset was imported. Nothing to convert")
             return
 
