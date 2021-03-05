@@ -347,25 +347,6 @@ class ProcedureHandling():
 
         shutil.copy(procedure_path, target)
 
-    def register_procedure_dir(self, procedure_dir: str,
-                               overwrite: bool = False):
-        """ Registers a procedure dir in datalad
-
-        Args:
-            procedure_dir: The directory to register
-            overwrite: Optional; In case another procedure dir is already
-                       registered, if it should be overwritten.
-        """
-
-        # check if additional procedure_dir exist
-        # (also check for relative paths)
-        if (not Path(procedure_dir).exists()
-                and not Path(self.dataset_path, procedure_dir).exists()):
-            self.log.warning("Procedure dir %s, does not exist", procedure_dir)
-
-        # register additional procedure dir in datalad
-        self._register_proc_dir(procedure_dir, overwrite)
-
     def get_active_procedures(self) -> dict:
         """ Get all procedures registered to be executed in the conversion
 

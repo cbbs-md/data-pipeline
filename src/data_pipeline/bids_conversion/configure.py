@@ -132,7 +132,6 @@ def _ask_questions() -> Tuple[dict, dict]:
         proc_change="Change active procedures",
         proc_create="Create new procedure",
         proc_import="Import procedure",
-        proc_register="Register additional procedure location",
     )
 
     questions = [
@@ -196,7 +195,6 @@ def _ask_questions() -> Tuple[dict, dict]:
                 choices["proc_change"],
                 choices["proc_create"],
                 choices["proc_import"],
-                choices["proc_register"],
                 questionary.Separator(),
                 "Return",
             ],
@@ -241,15 +239,6 @@ def _ask_questions() -> Tuple[dict, dict]:
                      and x["procedure_select"] == choices["proc_import"]
                      and x["procedure_file"]),
             "default": lambda x: Path(x["procedure_file"]).stem
-        },
-        {
-            "type": "path",
-            "name": "procedure_dir",
-            "message": "Path to the procedures:",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_register"]),
-            "only_directories": True,
-            "default": config["default_procedure_dir"]
         },
     ]
     return questionary.prompt(questions), choices
@@ -371,19 +360,6 @@ class ProcSwitcher():
         """ Wrapper around ProcedureHandler """
         self.proc_handler.import_procedure(self.answers["procedure_file"],
                                            self.answers["procedure_file_name"])
-
-    def proc_register(self):
-        """ Wrapper around ProcedureHandler """
-        try:
-            self.proc_handler.register_procedure_dir(
-                self.answers["procedure_dir"]
-            )
-        except utils.NotPossible:
-            if questionary.confirm("Overwrite?").ask():
-                self.proc_handler.register_procedure_dir(
-                    self.answers["procedure_dir"],
-                    overwrite=True
-                )
 
     def proc_change(self):
         """ Activate or deactivate procedures """
