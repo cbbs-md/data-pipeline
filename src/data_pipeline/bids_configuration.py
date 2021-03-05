@@ -264,14 +264,17 @@ class SourceConfiguration():
                       path, self.anon_subject, self.acqid)
 
         # creates a subdataset <acqid> under sourcedata/dicoms
-        datalad.hirni_import_dcm(
-            dataset=self.dataset,
-            anon_subject=self.anon_subject,
-            # subject=
-            path=path,
-            acqid=self.acqid,
-            # properties=
-        )
+        # without the ChangeWorkingDir the command does not operate inside of
+        # dataset_path and thus does not find the rules file
+        with utils.ChangeWorkingDir(self.dataset_path):
+            datalad.hirni_import_dcm(
+                dataset=self.dataset,
+                anon_subject=self.anon_subject,
+                # subject=
+                path=path,
+                acqid=self.acqid,
+                # properties=
+            )
 
     def register_rule(self):
         """Register datalad hirni rule"""
