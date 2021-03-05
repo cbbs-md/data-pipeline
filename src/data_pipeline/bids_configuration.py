@@ -949,10 +949,10 @@ def configure_bids_conversion(project_dir):
         bids_setup.run()
 
     repo = BidsGitHandling(source_setup.dataset_path)
-    repo.checkout_config_branch()
 
-    try:
-        while True:
+    while True:
+        try:
+            repo.checkout_config_branch()
             answers, choices = _ask_questions()
             if not answers or answers["step_select"] == "Exit":
                 break
@@ -962,10 +962,10 @@ def configure_bids_conversion(project_dir):
                                   choices, answers, repo)
             choices_reverted = {v: k for k, v in choices.items()}
             getattr(switch, choices_reverted[answers["step_select"]])()
-    finally:
-        repo.checkout_starting_branch()
-        # commit changes in .datalad/config, rules, procedures
-        repo.commit()
+        finally:
+            repo.checkout_starting_branch()
+            # commit changes in .datalad/config, rules, procedures
+            repo.commit()
 
 
 class StepSwitcher():
@@ -1010,13 +1010,6 @@ class StepSwitcher():
 
     def preview(self):
         """ Wrapper around BidsConfiguration """
-
-        # make sure that changes are committed
-        self.git_repo.checkout_starting_branch()
-        # commit changes in .datalad/config, rules, procedures
-        self.git_repo.commit()
-        self.git_repo.checkout_config_branch()
-
         proc_handler = ProcedureHandling(self.source_dataset_path)
         active_procedures = proc_handler.get_active_procedures()
         self.bids_conf.generate_preview(
