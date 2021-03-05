@@ -2,7 +2,7 @@
 
 import subprocess
 
-import utils
+import data_pipeline.utils as utils
 
 
 def _get_path(config, acq):
@@ -12,8 +12,8 @@ def _get_path(config, acq):
 
     if user is None or host is None:
         return path
-    else:
-        return "{user}@{host}:{path}".format(user=user, host=host, path=path)
+
+    return "{user}@{host}:{path}".format(user=user, host=host, path=path)
 
 
 def sync_data_via_rsync(subjects: list, config: dict):

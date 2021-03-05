@@ -1,6 +1,6 @@
 """ Set up module namespace """
 
-from .bids_configuration import configure
+from .configuration import configure
 
 __all__ = [
     "configure"

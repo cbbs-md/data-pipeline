@@ -12,5 +12,6 @@ import click
 def main(dataset: str):
     print("Worked!", dataset)
 
+
 if __name__ == "__main__":
     main()

@@ -24,7 +24,7 @@ class SetupDatalad():
         self.dataset_path = Path(self.project_dir,
                                  self.config["dataset_name"]).expanduser()
 
-        self.log = utils.get_logger(__class__)
+        self.log = utils.get_logger(__class__)  # type: ignore
         self.dataset = None
 
         self.gitignore_template = "templates/gitignore_template"
