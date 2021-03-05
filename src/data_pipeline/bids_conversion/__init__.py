@@ -1,6 +1,6 @@
 """ Set up module namespace """
 
-from .configuration import configure
+from .configure import configure
 
 __all__ = [
     "configure"
