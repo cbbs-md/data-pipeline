@@ -215,14 +215,15 @@ class BidsConfiguration():
         """ cleanup generated bids data """
 
         # uninstall sourcedata
-        # without the ChangeWorkingDir the command does not operate inside of
-        # dataset_path
-        with utils.ChangeWorkingDir(self.dataset_path):
-            datalad.uninstall(
-                path=self.install_dataset_name,
-                dataset=self.dataset_path,
-                recursive=True
-            )
+        if self.install_dataset_path.exists():
+            # without the ChangeWorkingDir the command does not operate inside
+            # of dataset_path
+            with utils.ChangeWorkingDir(self.dataset_path):
+                datalad.uninstall(
+                    path=self.install_dataset_name,
+                    dataset=self.dataset_path,
+                    recursive=True
+                )
 
         # remove bids conversion
         bids_dir = self._get_bids_dir()
