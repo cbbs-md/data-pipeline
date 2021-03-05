@@ -6,7 +6,7 @@ import sys
 
 import click
 
-from data_pipeline.bids_configuration import configure_bids_conversion
+from data_pipeline.bids_conversion.bids_configuration import configure_bids_conversion
 from data_pipeline.config_handler import ConfigHandler
 
 
