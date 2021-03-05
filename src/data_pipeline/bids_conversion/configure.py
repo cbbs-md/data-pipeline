@@ -14,124 +14,6 @@ from .source_configuration import (
 from .bids_configuration import BidsConfiguration
 
 
-def _ask_questions() -> Tuple[dict, dict]:
-    """ Define and ask the questionary for the user"""
-
-    config = ConfigHandler.get_instance().get("bids_conversion")
-
-    choices = dict(
-        import_data="Import data",
-        register_rule="Configure and register rule",
-        add_procedure="Add procedure »",
-        preview="Generate preview",
-        check="Check for BIDS conformity",
-        cleanup="Cleanup",
-
-        proc_change="Change active procedures",
-        proc_create="Create new procedure",
-        proc_import="Import procedure",
-        proc_register="Register additional procedure location",
-    )
-
-    questions = [
-        {
-            "type": "select",
-            "name": "step_select",
-            "message": "What do you want to do?",
-            "choices": [
-                # Sets up a datalad dataset and prepares the convesion
-                choices["import_data"],
-                # Registers and applies datalad hirni rule
-                choices["register_rule"],
-                # Create, import or register procedures
-                choices["add_procedure"],
-                # Generates the BIDS converion
-                choices["preview"],
-                choices["check"],
-                # Remove imported and converted
-                choices["cleanup"],
-                questionary.Separator(),
-                "Help",
-                "Exit"
-            ],
-            "use_shortcuts": True,
-            "default": "Exit",
-
-        },
-        {
-            "type": "path",
-            "name": "data_path",
-            "message": "Path to the data tar ball:",
-            "when": lambda x: x["step_select"] == choices["import_data"],
-        },
-        {
-            "type": "select",
-            "name": "procedure_select",
-            "message": "What do you want to do?",
-            "when": lambda x: x["step_select"] == choices["add_procedure"],
-            "choices": [
-                choices["proc_change"],
-                choices["proc_create"],
-                choices["proc_import"],
-                choices["proc_register"],
-                questionary.Separator(),
-                "Return",
-            ],
-            "use_shortcuts": True,
-            "default": "Return",
-        },
-        {
-            "type": "select",
-            "name": "procedure_type",
-            "message": "What type of procedure do you want to create?",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_create"]),
-            "choices": [
-                "shell",
-                "python",
-                questionary.Separator(),
-                "Return",
-            ],
-            "use_shortcuts": True,
-            "default": "Return",
-        },
-        {
-            "type": "text",
-            "name": "procedure_name",
-            "message": "How should the procedure be called?",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_create"]
-                     and x["procedure_type"] != "Return"),
-        },
-        {
-            "type": "path",
-            "name": "procedure_file",
-            "message": "Path to the procedure:",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_import"]),
-        },
-        {
-            "type": "text",
-            "name": "procedure_file_name",
-            "message": "Name of the procedure:",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_import"]
-                     and x["procedure_file"]),
-            "default": lambda x: Path(x["procedure_file"]).stem
-        },
-        {
-            "type": "path",
-            "name": "procedure_dir",
-            "message": "Path to the procedures:",
-            "when": (lambda x: x["step_select"] == choices["add_procedure"]
-                     and x["procedure_select"] == choices["proc_register"]),
-            "only_directories": True,
-            "default": config["default_procedure_dir"]
-        },
-    ]
-    return questionary.prompt(questions), choices
-
-
 def configure(project_dir):
     """ Sets up a datalad dataset and prepares the convesion """
 
@@ -231,6 +113,148 @@ def configure(project_dir):
             repo.commit()
 
 
+def _ask_questions() -> Tuple[dict, dict]:
+    """ Define and ask the questionary for the user"""
+
+    config = ConfigHandler.get_instance().get("bids_conversion")
+
+    choices = dict(
+        import_data="Import data",
+        register_rule="Configure and register rule »",
+        add_procedure="Add procedure »",
+        preview="Generate preview",
+        check="Check for BIDS conformity",
+        cleanup="Cleanup",
+
+        rule_create="Create new rule",
+        rule_import="Import rule",
+
+        proc_change="Change active procedures",
+        proc_create="Create new procedure",
+        proc_import="Import procedure",
+        proc_register="Register additional procedure location",
+    )
+
+    questions = [
+        {
+            "type": "select",
+            "name": "step_select",
+            "message": "What do you want to do?",
+            "choices": [
+                # Sets up a datalad dataset and prepares the convesion
+                choices["import_data"],
+                # Registers and applies datalad hirni rule
+                choices["register_rule"],
+                # Create, import or register procedures
+                choices["add_procedure"],
+                # Generates the BIDS converion
+                choices["preview"],
+                choices["check"],
+                # Remove imported and converted
+                choices["cleanup"],
+                questionary.Separator(),
+                "Help",
+                "Exit"
+            ],
+            "use_shortcuts": True,
+            "default": "Exit",
+
+        },
+        {
+            "type": "path",
+            "name": "data_path",
+            "message": "Path to the data tar ball:",
+            "when": lambda x: x["step_select"] == choices["import_data"],
+        },
+        {
+            "type": "select",
+            "name": "rule_select",
+            "message": "What do you want to do?",
+            "when": lambda x: x["step_select"] == choices["register_rule"],
+            "choices": [
+                choices["rule_create"],
+                choices["rule_import"],
+                questionary.Separator(),
+                "Return"
+            ],
+            "use_shortcuts": True,
+            "default": "Return",
+        },
+        {
+            "type": "path",
+            "name": "rule_file",
+            "message": "Path to the rule:",
+            "when": (lambda x: x["step_select"] == choices["register_rule"]
+                     and x["rule_select"] == choices["rule_import"]),
+        },
+        {
+            "type": "select",
+            "name": "procedure_select",
+            "message": "What do you want to do?",
+            "when": lambda x: x["step_select"] == choices["add_procedure"],
+            "choices": [
+                choices["proc_change"],
+                choices["proc_create"],
+                choices["proc_import"],
+                choices["proc_register"],
+                questionary.Separator(),
+                "Return",
+            ],
+            "use_shortcuts": True,
+            "default": "Return",
+        },
+        {
+            "type": "select",
+            "name": "procedure_type",
+            "message": "What type of procedure do you want to create?",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_create"]),
+            "choices": [
+                "shell",
+                "python",
+                questionary.Separator(),
+                "Return",
+            ],
+            "use_shortcuts": True,
+            "default": "Return",
+        },
+        {
+            "type": "text",
+            "name": "procedure_name",
+            "message": "How should the procedure be called?",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_create"]
+                     and x["procedure_type"] != "Return"),
+        },
+        {
+            "type": "path",
+            "name": "procedure_file",
+            "message": "Path to the procedure:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_import"]),
+        },
+        {
+            "type": "text",
+            "name": "procedure_file_name",
+            "message": "Name of the procedure:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_import"]
+                     and x["procedure_file"]),
+            "default": lambda x: Path(x["procedure_file"]).stem
+        },
+        {
+            "type": "path",
+            "name": "procedure_dir",
+            "message": "Path to the procedures:",
+            "when": (lambda x: x["step_select"] == choices["add_procedure"]
+                     and x["procedure_select"] == choices["proc_register"]),
+            "only_directories": True,
+            "default": config["default_procedure_dir"]
+        },
+    ]
+    return questionary.prompt(questions), choices
+
+
 class StepSwitcher():
     """ Switcher for procedure action
 
@@ -258,8 +282,13 @@ class StepSwitcher():
         self.src_conf.import_data(tarball=self.answers["data_path"])
 
     def register_rule(self):
-        """ Wrapper around BidsConfiguration"""
-        self.src_conf.register_rule()
+        """ Handle all rule relevant answers"""
+        if self.answers["rule_select"] == "Return":
+            return
+
+        switch = RuleSwitcher(self.src_conf, self.answers)
+        choices_reverted = {v: k for k, v in self.choices.items()}
+        getattr(switch, choices_reverted[self.answers["rule_select"]])()
 
     def add_procedure(self):
         """ Handle all procedure relevant answers"""
@@ -272,7 +301,7 @@ class StepSwitcher():
         getattr(switch, choices_reverted[self.answers["procedure_select"]])()
 
     def preview(self):
-        """ Wrapper around BidsConfiguration """
+        """ Wrapper around ProcedureHandling """
         proc_handler = ProcedureHandling(self.source_dataset_path)
         active_procedures = proc_handler.get_active_procedures()
         self.bids_conf.generate_preview(
@@ -288,6 +317,32 @@ class StepSwitcher():
         """ Wrapper around BidsConfiguration """
         self.src_conf.cleanup(self.git_repo)
         self.bids_conf.cleanup()
+
+
+class RuleSwitcher():
+    """ Switcher for rule action
+
+    The purpose of this class is to simplify the questionary checking.
+    Insead of checking each value manually the according Switcher method
+    can be called. E.g.
+    Use
+       getattr(Switcher, "rule_create"])()
+    Instead of
+       if answers["rule_select"] == choices["rule_create"]:
+           proc_handler.create_procedure(...)
+    """
+
+    def __init__(self, src_conf, answers):
+        self.src_conf = src_conf
+        self.answers = answers
+
+    def rule_create(self):
+        """ Wrapper around ProcedureHandler """
+        self.src_conf.register_rule()
+
+    def rule_import(self):
+        """ Wrapper around ProcedureHandler """
+        self.src_conf.import_rule(self.answers["rule_file"])
 
 
 class ProcSwitcher():

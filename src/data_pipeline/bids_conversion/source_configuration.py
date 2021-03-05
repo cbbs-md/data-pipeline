@@ -61,10 +61,21 @@ class SourceConfiguration():
     def register_rule(self):
         """Register datalad hirni rule"""
 
+        rule_template = Path(self.config["rule_template"])
+        rule_file = self._register_and_add_rule(rule_template)
+
+        # edit rule
+        self.log.info("Opening %s", rule_file)
+        click.edit(filename=rule_file)
+
+        self._create_studyspec()
+
+    def _register_and_add_rule(self, rule_template):
+        """Register datalad hirni rule"""
+
         # TODO get these from config
         rule_dir = Path(self.config["rule_dir"])
         rule = self.config["rule_name"]
-        rule_template = Path(self.config["rule_template"])
 
         rule_file = Path(rule_dir, rule)
 
@@ -75,7 +86,6 @@ class SourceConfiguration():
         #   -> clear studyspec, copy rule template
         # 3. rule definied + different rule file
         #   -> overwrite rule, clear studyspec, copy rule template
-
         if (not config.has_option("datalad.hirni.dicom2spec", "rules")
                 or config.get("datalad.hirni.dicom2spec.rules") != rule_file):
             config.set("datalad.hirni.dicom2spec.rules",
@@ -104,12 +114,7 @@ class SourceConfiguration():
                 this_file_path=Path(__file__)
             )
 
-        # edit rule template
-        abs_rule_file = Path(self.dataset_path, rule_file)
-        self.log.info("Opening %s", abs_rule_file)
-        click.edit(filename=abs_rule_file)
-
-        self._create_studyspec()
+        return Path(self.dataset_path, rule_file)
 
     def _reset_studyspec(self):
         """ reset studyspec to avoid problems with next imported dataset
@@ -157,6 +162,15 @@ class SourceConfiguration():
                 # acquisition=
                 # properties=
             )
+
+    def import_rule(self, rule: Union[str, Path]):
+        """Import datalad hirni rule"""
+
+        # handle "~/" paths
+        rule = Path(rule).expanduser().resolve()
+
+        self._register_and_add_rule(rule)
+        self._create_studyspec()
 
     def cleanup(self, git_repo):
         """ Cleanup the configuration data
