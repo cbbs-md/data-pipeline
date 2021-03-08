@@ -13,6 +13,8 @@ import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
 from data_pipeline.git_handler import GitBase
 
+from .bids_conversion import SourceHandler
+
 
 class SourceConfiguration():
     """ Enables configuration of rules to for bids convertions """
@@ -36,27 +38,12 @@ class SourceConfiguration():
         Args:
             tarball: path to tarball to import
         """
-
-        path = Path(tarball).expanduser().resolve()
-
-        # datalad hirni-import-dcm --anon-subject "$ANON" \
-        #   ../../original/sourcedata.tar.gz sourcedata
-
-        self.log.info("Import %s: anon-subject=%s, aquisition=%s",
-                      path, self.anon_subject, self.acqid)
-
-        # creates a subdataset <acqid> under sourcedata/dicoms
-        # without the ChangeWorkingDir the command does not operate inside of
-        # dataset_path and thus does not find the rules file
-        with utils.ChangeWorkingDir(self.dataset_path):
-            datalad.hirni_import_dcm(
-                dataset=self.dataset,
-                anon_subject=self.anon_subject,
-                # subject=
-                path=path,
-                acqid=self.acqid,
-                # properties=
-            )
+        source_handler = SourceHandler(self.dataset_path)
+        source_handler.import_data(
+            tarball=tarball,
+            anon_subject=self.anon_subject,
+            acqid=self.acqid
+        )
 
     def register_rule(self):
         """Register datalad hirni rule"""
