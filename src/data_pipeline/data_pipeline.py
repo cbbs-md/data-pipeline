@@ -97,7 +97,7 @@ def main(setup, project, configure, run):
         bids_conversion.configure(project)
 
     if run:
-        bids_conversion.run()
+        bids_conversion.run(project)
 
 
 if __name__ == "__main__":
