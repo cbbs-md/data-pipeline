@@ -87,7 +87,7 @@ class BidsConfiguration():
 
         # imported data
         src_data_dir = Path(self.dataset_path, self.install_dataset_name,
-                            self.acqid, "dicoms", "sourcedata")
+                            self.acqid, "dicoms")
         src_tree = utils.run_cmd(
             ["tree", "-d", src_data_dir], self.log
         ).split("\n")
