@@ -1,11 +1,25 @@
 """ Converts tar ball into bids compatible dataset using datalad and hirni"""
 
 from pathlib import Path
+from typing import Union
 
 import datalad.api as datalad
 
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
+
+
+def get_dataset_path(project_dir: Union[Path, str],
+                     dataset_name: Union[Path, str]) -> Path:
+    """ Creates the dataset full path
+
+    Args:
+        project_dir: The directory of the dataset
+        dataset_name: the name of the dataset
+    Returns:
+        The full path of the dataset
+    """
+    return Path(project_dir, dataset_name).expanduser()
 
 
 class SetupDatalad():
@@ -21,8 +35,8 @@ class SetupDatalad():
         self.config = self._get_config(config)
 
         self.project_dir = project_dir
-        self.dataset_path = Path(self.project_dir,
-                                 self.config["dataset_name"]).expanduser()
+        self.dataset_path = get_dataset_path(self.project_dir,
+                                             self.config["dataset_name"])
 
         self.log = utils.get_logger(__class__)  # type: ignore
         self.dataset = None
