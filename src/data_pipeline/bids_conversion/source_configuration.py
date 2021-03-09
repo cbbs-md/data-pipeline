@@ -186,7 +186,7 @@ class ProcedureHandling():
         self.confhandler = ConfigHandler.get_instance()
         self.config = self.confhandler.get("bids_conversion")
 
-        self.log = utils.get_logger(__class__)
+        self.log = utils.get_logger(__class__)  # type: ignore
 
     def get_available_procedures(self):
         """ Show all procedures known to datalad """

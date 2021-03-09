@@ -35,8 +35,10 @@ class SourceHandler():
 
         path = Path(tarball).expanduser().resolve()
 
-        # datalad hirni-import-dcm --anon-subject "$ANON" \
-        #   ../../original/sourcedata.tar.gz sourcedata
+        # check if tarball exists
+        if not path.exists():
+            self.log.error("Tarball %s does not exists", path)
+            raise Exception("Tarball {} does not exists".format(path))
 
         self.log.info("Import %s: anon-subject=%s, aquisition=%s",
                       path, anon_subject, acqid)
@@ -45,6 +47,8 @@ class SourceHandler():
         # without the ChangeWorkingDir the command does not operate inside of
         # dataset_path and thus does not find the rules file
         with utils.ChangeWorkingDir(self.dataset_path):
+            # datalad hirni-import-dcm --anon-subject "$ANON" \
+            #   ../../original/sourcedata.tar.gz sourcedata
             datalad.hirni_import_dcm(
                 dataset=self.dataset,
                 anon_subject=anon_subject,
@@ -56,6 +60,7 @@ class SourceHandler():
 
 
 class BidsConversion():
+    """ Install and convert data into bids format """
 
     def __init__(self, dataset_path, anon_subject):
         self.dataset_path = Path(dataset_path)
@@ -173,7 +178,7 @@ class BidsConversion():
 
         container_path = Path(container_dir, name)
         if not container_path.exists():
-            # modify environment only for exectued command and not whole
+            # modify environment only for executed command and not whole
             # process
             environment = copy.deepcopy(os.environ)
             environment["SINGULARITY_PULLFOLDER"] = str(container_dir)
