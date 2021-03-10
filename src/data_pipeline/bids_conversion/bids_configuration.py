@@ -18,8 +18,7 @@ class BidsConfiguration():
         self.dataset_path = Path(dataset_path)
 
         self.log = utils.get_logger(__class__)  # type: ignore
-        self.dataset = datalad.Dataset(self.dataset_path)
-        # TODO replace with datalad require_dataset?
+        self.dataset = utils.get_dataset(self.dataset_path, self.log)
 
         self.config = ConfigHandler.get_instance().get("bids_conversion")
 

@@ -10,6 +10,9 @@ import subprocess
 from typing import Union
 import yaml
 
+from datalad.distribution.dataset import require_dataset
+from datalad.support.exceptions import NoDatasetFound
+
 
 class ConfigError(Exception):
     """Raised when there are missing parameters in the configuration"""
@@ -341,3 +344,25 @@ def show_side_by_side(left: list, right: list) -> str:
         result += "".join(word.ljust(col_width) for word in row) + "\n"
 
     return result
+
+
+def get_dataset(dataset_path: Union[str, Path], log):
+    """ Check if a dataset exist and get it
+
+    Args:
+        dataset_path: The path of the dataset
+    Returns:
+        The datalad dataset corresponding to the Path.
+    Raises:
+        UsageError: If the dataset was not created by the user.
+    """
+
+    try:
+        dataset = require_dataset(dataset=dataset_path, check_installed=True)
+    except (ValueError, NoDatasetFound) as excp:
+        log.error("Dataset %s does not exist. Please run configuration "
+                  "first.", dataset_path)
+        raise UsageError("Dataset does not exist. Please run configuration "
+                         "first.") from excp
+
+    return dataset

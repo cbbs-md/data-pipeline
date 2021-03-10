@@ -6,33 +6,9 @@ from pathlib import Path
 from typing import Union
 
 import datalad.api as datalad
-from datalad.distribution.dataset import require_dataset
-from datalad.support.exceptions import NoDatasetFound
 
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
-
-
-def get_dataset(dataset_path: Union[str, Path], log):
-    """ Check if a dataset exist and get it
-
-    Args:
-        dataset_path: The path of the dataset
-    Returns:
-        The datalad dataset corresponding to the Path.
-    Raises:
-        UsageError: If the dataset was not created by the user.
-    """
-
-    try:
-        dataset = require_dataset(dataset=dataset_path, check_installed=True)
-    except (ValueError, NoDatasetFound) as excp:
-        log.error("Dataset %s does not exist. Please run configuration "
-                  "first.", dataset_path)
-        raise utils.UsageError("Dataset does not exist. Please run "
-                               "configuration first.") from excp
-
-    return dataset
 
 
 class SourceHandler():
@@ -43,7 +19,7 @@ class SourceHandler():
         self.log = utils.get_logger(__class__)  # type: ignore
 
         self.dataset_path = Path(dataset_path)
-        self.dataset = get_dataset(self.dataset_path, self.log)
+        self.dataset = utils.get_dataset(self.dataset_path, self.log)
 
     def import_data(self, tarball: str, anon_subject: str, acqid: str):
         """ Import tarball as subdataset
@@ -88,7 +64,7 @@ class BidsConversion():
         self.anon_subject = anon_subject
 
         self.log = utils.get_logger(__class__)  # type: ignore
-        self.dataset = get_dataset(self.dataset_path, self.log)
+        self.dataset = utils.get_dataset(self.dataset_path, self.log)
 
         self.config = ConfigHandler.get_instance().get("bids_conversion")
 
