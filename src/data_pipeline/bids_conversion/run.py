@@ -3,8 +3,6 @@
 Converts a tar ball into bids compatible dataset using datalad and hirni
 """
 
-from pathlib import Path
-
 from data_pipeline.config_handler import ConfigHandler
 from data_pipeline.setup_datalad import get_dataset_path
 from data_pipeline import utils
@@ -37,10 +35,6 @@ class Conversion():
         """ import tarball into sourcedata """
 
         tarball = self.data_path.format(anon_subject=anon_subject, acqid=acqid)
-
-        # TODO proper detection if already imported
-        if Path(self.source_dataset_path, acqid, "dicoms").exists():
-            return
 
         try:
             source_handler = SourceHandler(self.source_dataset_path)

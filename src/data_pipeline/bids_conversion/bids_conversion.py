@@ -32,6 +32,11 @@ class SourceHandler():
 
         path = Path(tarball).expanduser().resolve()
 
+        # TODO proper detection if already imported
+        if Path(self.dataset_path, acqid, "dicoms").exists():
+            self.log.info("Acquisition dataset already imported.")
+            return
+
         # check if tarball exists
         if not path.exists():
             self.log.error("Tarball %s does not exists", path)
