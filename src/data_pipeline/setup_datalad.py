@@ -98,8 +98,11 @@ class SetupDatalad():
             self._apply_patches()
 
             if self.config["add_gitignore"]:
+                target = self.dataset_path/".gitignore"
                 utils.copy_template(template=self.gitignore_template,
-                                    target=self.dataset_path/".gitignore")
+                                    target=target)
+                datalad.save(path=target, dataset=self.dataset_path,
+                             message="Add gitignore")
 
             self._commit_hirni_patches()
 
