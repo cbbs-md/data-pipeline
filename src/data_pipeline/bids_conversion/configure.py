@@ -96,10 +96,11 @@ def configure(project_dir):
 
     while True:
         try:
-            repo.checkout_config_branch()
             answers, choices = _ask_questions()
             if not answers or answers["step_select"] == "Exit":
                 break
+
+            repo.checkout_config_branch()
 
             switch = StepSwitcher(source_setup.dataset_path,
                                   bids_setup.dataset_path,
