@@ -64,10 +64,6 @@ class BidsConfiguration():
             shutil.rmtree(bids_dir)
 
         self.log.info("Convert to BIDS based on study specification")
-
-        # TODO check if heudiconv container already downloaded, otherwise warn
-        # user that this might take some time
-
         self.conversion.convert(spec)
         self.conversion.run_procedures(active_procedures)
 

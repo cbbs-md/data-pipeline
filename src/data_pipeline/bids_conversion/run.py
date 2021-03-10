@@ -19,6 +19,8 @@ class Conversion():
         self.bids_dataset_path = bids_dataset_path
         self.data_path = data_path
 
+        self.source_handler = None
+
     def run(self, anon_subject: str, acqid: str):
         """ Run the bids convertion
 
@@ -37,12 +39,12 @@ class Conversion():
         tarball = self.data_path.format(anon_subject=anon_subject, acqid=acqid)
 
         try:
-            source_handler = SourceHandler(self.source_dataset_path)
+            self.source_handler = SourceHandler(self.source_dataset_path)
         except utils.UsageError:
             # error was already logged and more traceback is not needed
             return
 
-        source_handler.import_data(
+        self.source_handler.import_data(
             tarball=tarball,
             anon_subject=anon_subject,
             acqid=acqid
@@ -54,6 +56,9 @@ class Conversion():
         except utils.UsageError:
             # error was already logged and more traceback is not needed
             return
+
+        # to avoid reloading the container after a uninstall
+        self.source_handler.get_heudiconv_container()
 
         # install/update sourcedata into bids
         conversion.install_source_dataset(self.source_dataset_path)
@@ -96,6 +101,6 @@ def run(project_dir):
         # get anon_subject, acquid, and tarball
         anon_subject = subject["anon_subject"]
         acqid = subject["acqid"]
-        print("Convert aquid={}, anon_subject={}".format(acqid, anon_subject))
+        print("Convert acqid={}, anon_subject={}".format(acqid, anon_subject))
 
         conv.run(anon_subject=anon_subject, acqid=acqid)

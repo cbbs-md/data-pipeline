@@ -60,6 +60,18 @@ class SourceHandler():
                 # properties=
             )
 
+    def get_heudiconv_container(self):
+        """ load the heudiconv container into the source dataset """
+
+        heudiconv_container = Path(self.dataset_path, "code", "hirni-toolbox",
+                                   "converters", "heudiconv", "heudiconv.simg")
+        if heudiconv_container.exists():
+            return
+
+        self.log.info("Heudiconv container has to be downloaded. This "
+                      "might take some time.")
+        datalad.get(heudiconv_container, dataset=self.dataset_path)
+
 
 class BidsConversion():
     """ Install and convert data into bids format """
@@ -94,6 +106,7 @@ class BidsConversion():
                 )
                 return
 
+        self.log.info("Install source dataset.")
         # using the command line interface since the datalad api behaves
         # differently and is missing the activation of datalad-url
         # Then the procedures of the subdataset are not found
@@ -123,6 +136,13 @@ class BidsConversion():
         Args:
             spec: A list of hirni studyspec files to use
         """
+        # TODO check if heudiconv container already downloaded, otherwise warn
+        # user that this might take some time
+        heudiconv_container = Path(self.install_dataset_path, "code",
+                                   "hirni-toolbox", "converters", "heudiconv",
+                                   "heudiconv.simg")
+        if not heudiconv_container.exists():
+            self.log.info("convert: Heudiconv container not downloaded.")
 
         # since logging can not be controlled when using the datalad api, the
         # console output will be flooded -> circument it by using the command

@@ -32,18 +32,23 @@ class SourceConfiguration():
         self.spec_file = Path(self.dataset_path, self.acqid, "studyspec.json")
         self.anon_subject = self.config["config_anon_subject"]
 
+        self.source_handler = SourceHandler(self.dataset_path)
+
     def import_data(self, tarball: str):
         """ Import tarball as subdataset
 
         Args:
             tarball: path to tarball to import
         """
-        source_handler = SourceHandler(self.dataset_path)
-        source_handler.import_data(
+        self.source_handler.import_data(
             tarball=tarball,
             anon_subject=self.anon_subject,
             acqid=self.acqid
         )
+
+    def get_heudiconv_container(self):
+        """ Wrapper around SourceHandler """
+        self.source_handler.get_heudiconv_container()
 
     def register_rule(self):
         """Register datalad hirni rule"""

@@ -289,6 +289,10 @@ class StepSwitcher():
 
     def preview(self):
         """ Wrapper around ProcedureHandling """
+        # to make conversion easier since the container has not be reloaded
+        # after every drop
+        self.src_conf.get_heudiconv_container()
+
         proc_handler = ProcedureHandling(self.source_dataset_path)
         active_procedures = proc_handler.get_active_procedures()
         self.bids_conf.generate_preview(
