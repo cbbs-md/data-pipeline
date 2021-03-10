@@ -202,7 +202,7 @@ def get_logger(my_class, postfix: str = None) -> logging.Logger:
 
 def run_cmd(cmd: list, log: logging.Logger, error_message: str = None,
             raise_exception: bool = True, env: dict = None,
-            surpress_output: bool = False) -> str:
+            suppress_output: bool = False) -> str:
     """ Runs a command via subprocess and returns the output
 
     Args:
@@ -213,7 +213,7 @@ def run_cmd(cmd: list, log: logging.Logger, error_message: str = None,
             case something went wrong during command execution.
         env: Optional; In case the command should be exectued in a special
             environment
-        surpress_output: Optional; In case the calling application want to
+        suppress_output: Optional; In case the calling application want to
             control the output separately, it can be disabled.
     """
 
@@ -231,7 +231,7 @@ def run_cmd(cmd: list, log: logging.Logger, error_message: str = None,
     # capture return code explicitely instead of useing subprocess
     # parameter check=True to be able to log error message
     if proc.returncode:
-        if not surpress_output:
+        if not suppress_output:
             if proc.stdout:
                 log.info(proc.stdout.decode("utf-8"))
 

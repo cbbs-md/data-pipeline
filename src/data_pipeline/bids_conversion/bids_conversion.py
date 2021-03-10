@@ -191,7 +191,7 @@ class BidsConversion():
             ],
             self.log,
             raise_exception=False,
-            surpress_output=True
+            suppress_output=True
         )
 
         self.log.info(res)
