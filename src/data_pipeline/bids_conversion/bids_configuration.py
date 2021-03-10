@@ -25,12 +25,6 @@ class BidsConfiguration():
         self.acqid = self.config["config_acqid"]
         self.anon_subject = self.config["config_anon_subject"]
 
-        # the name under which the source dataset should be installed inside
-        # the bids dataset
-        self.install_dataset_name = Path("sourcedata")
-        self.install_dataset_path = Path(self.dataset_path,
-                                         self.install_dataset_name)
-
         self.conversion = BidsConversion(self.dataset_path, self.anon_subject)
 
     def generate_preview(self, source_dataset: str, active_procedures: dict):
@@ -51,15 +45,15 @@ class BidsConfiguration():
         self.conversion.install_source_dataset(source_dataset)
 
         # check if data was imported
-        if not (self.install_dataset_path/self.acqid).exists():
+        if not (self.conversion.install_dataset_path/self.acqid).exists():
             self.log.warning("No dataset was imported. Nothing to convert")
             return
 
         spec = [
             # "sourcedata/studyspec.json",
-            self.install_dataset_name/"studyspec.json",
+            self.conversion.install_dataset_name/"studyspec.json",
             # "sourcedata/*/studyspec.json"
-            self.install_dataset_name/self.acqid/"studyspec.json"
+            self.conversion.install_dataset_name/self.acqid/"studyspec.json"
         ]
 
         # Clean up old bids conversion
@@ -85,7 +79,8 @@ class BidsConfiguration():
     def _print_preview(self, bids_dir):
 
         # imported data
-        src_data_dir = Path(self.dataset_path, self.install_dataset_name,
+        src_data_dir = Path(self.dataset_path,
+                            self.conversion.install_dataset_name,
                             self.acqid, "dicoms")
         src_tree = utils.run_cmd(
             ["tree", "-d", src_data_dir], self.log
@@ -111,12 +106,12 @@ class BidsConfiguration():
         """ cleanup generated bids data """
 
         # uninstall sourcedata
-        if self.install_dataset_path.exists():
+        if self.conversion.install_dataset_path.exists():
             # without the ChangeWorkingDir the command does not operate inside
             # of dataset_path
             with utils.ChangeWorkingDir(self.dataset_path):
                 datalad.uninstall(
-                    path=self.install_dataset_name,
+                    path=self.conversion.install_dataset_name,
                     dataset=self.dataset_path,
                     recursive=True
                 )
