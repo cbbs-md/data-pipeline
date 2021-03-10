@@ -14,6 +14,7 @@ from .source_configuration import ProcedureHandling
 
 class Conversion():
     """ Import and convert data """
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, source_dataset_path, bids_dataset_path, data_path):
         self.source_dataset_path = source_dataset_path
@@ -28,35 +29,47 @@ class Conversion():
             acqid:  The acquisition identifier
         """
 
+        self._import_data(anon_subject, acqid)
+        self._convert(anon_subject, acqid)
+        self._cleanup()
+
+    def _import_data(self, anon_subject: str, acqid: str):
+        """ import tarball into sourcedata """
+
         tarball = self.data_path.format(anon_subject=anon_subject, acqid=acqid)
 
-        # import tarball into sourcedata
         # TODO proper detection if already imported
-        subject_path = Path(self.source_dataset_path, acqid, "dicoms")
-        if not subject_path.exists():
-            try:
-                source_handler = SourceHandler(self.source_dataset_path)
-            except utils.UsageError:
-                # error was already logged and more traceback is not needed
-                return
-            source_handler.import_data(
-                tarball=tarball,
-                anon_subject=anon_subject,
-                acqid=acqid
-            )
+        if Path(self.source_dataset_path, acqid, "dicoms").exists():
+            return
 
+        try:
+            source_handler = SourceHandler(self.source_dataset_path)
+        except utils.UsageError:
+            # error was already logged and more traceback is not needed
+            return
+
+        source_handler.import_data(
+            tarball=tarball,
+            anon_subject=anon_subject,
+            acqid=acqid
+        )
+
+    def _convert(self, anon_subject: str, acqid: str):
         try:
             conversion = BidsConversion(self.bids_dataset_path, anon_subject)
         except utils.UsageError:
             # error was already logged and more traceback is not needed
             return
+
         # install/update sourcedata into bids
         conversion.install_source_dataset(self.source_dataset_path)
+
         # spec2bids
         conversion.convert(spec=[
             conversion.install_dataset_name/"studyspec.json",
             conversion.install_dataset_name/acqid/"studyspec.json"
         ])
+
         # procedures
         active_procedures = (ProcedureHandling(self.source_dataset_path)
                              .get_active_procedures())
@@ -64,6 +77,8 @@ class Conversion():
 
         conversion.run_bids_validator()
 
+    def _cleanup(self):
+        pass
         # TODO uninstall
 
 
