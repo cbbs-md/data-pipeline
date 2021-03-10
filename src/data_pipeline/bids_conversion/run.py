@@ -20,12 +20,12 @@ class Conversion():
         self.bids_dataset_path = bids_dataset_path
         self.data_path = data_path
 
-    def run(self, anon_subject, acqid):
+    def run(self, anon_subject: str, acqid: str):
         """ Run the bids convertion
 
         Args:
-            anon_subject:
-            acqid:
+            anon_subject: The anonymous subject identifier
+            acqid:  The acquisition identifier
         """
 
         tarball = self.data_path.format(anon_subject=anon_subject, acqid=acqid)
@@ -34,14 +34,22 @@ class Conversion():
         # TODO proper detection if already imported
         subject_path = Path(self.source_dataset_path, acqid, "dicoms")
         if not subject_path.exists():
-            source_handler = SourceHandler(self.source_dataset_path)
+            try:
+                source_handler = SourceHandler(self.source_dataset_path)
+            except utils.UsageError:
+                # error was already logged and more traceback is not needed
+                return
             source_handler.import_data(
                 tarball=tarball,
                 anon_subject=anon_subject,
                 acqid=acqid
             )
 
-        conversion = BidsConversion(self.bids_dataset_path, anon_subject)
+        try:
+            conversion = BidsConversion(self.bids_dataset_path, anon_subject)
+        except utils.UsageError:
+            # error was already logged and more traceback is not needed
+            return
         # install/update sourcedata into bids
         conversion.install_source_dataset(self.source_dataset_path)
         # spec2bids

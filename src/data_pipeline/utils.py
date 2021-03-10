@@ -19,6 +19,10 @@ class NotPossible(Exception):
     """ Raised when the requested action is not possible """
 
 
+class UsageError(Exception):
+    """ Raised when the action is not possible due to wrong usage """
+
+
 def get_config(filename: str) -> dict:
     """ Read config from file.
 

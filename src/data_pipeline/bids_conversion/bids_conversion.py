@@ -3,26 +3,47 @@
 import copy
 import os
 from pathlib import Path
+from typing import Union
 
 import datalad.api as datalad
+from datalad.distribution.dataset import require_dataset
+from datalad.support.exceptions import NoDatasetFound
 
 import data_pipeline.utils as utils
 from data_pipeline.config_handler import ConfigHandler
 
 
+def get_dataset(dataset_path: Union[str, Path], log):
+    """ Check if a dataset exist and get it
+
+    Args:
+        dataset_path: The path of the dataset
+    Returns:
+        The datalad dataset corresponding to the Path.
+    Raises:
+        UsageError: If the dataset was not created by the user.
+    """
+
+    try:
+        dataset = require_dataset(dataset=dataset_path, check_installed=True)
+    except (ValueError, NoDatasetFound) as excp:
+        log.error("Dataset %s does not exist. Please run configuration "
+                  "first.", dataset_path)
+        raise utils.UsageError("Dataset does not exist. Please run "
+                               "configuration first.") from excp
+
+    return dataset
+
+
 class SourceHandler():
     """ A basic source dataset """
+    # pylint: disable=too-few-public-methods
 
-    def __init__(self, dataset_path):
-        self.dataset_path = dataset_path
-
+    def __init__(self, dataset_path: Union[str, Path]):
         self.log = utils.get_logger(__class__)  # type: ignore
 
-        # TODO if datasets do not exists (i.e. no configuration was done)
-        # -> warning + create them
-
-        self.dataset = datalad.Dataset(self.dataset_path)
-        # TODO replace with datalad require_dataset?
+        self.dataset_path = Path(dataset_path)
+        self.dataset = get_dataset(self.dataset_path, self.log)
 
     def import_data(self, tarball: str, anon_subject: str, acqid: str):
         """ Import tarball as subdataset
@@ -38,7 +59,7 @@ class SourceHandler():
         # check if tarball exists
         if not path.exists():
             self.log.error("Tarball %s does not exists", path)
-            raise Exception("Tarball {} does not exists".format(path))
+            raise ValueError("Tarball {} does not exists".format(path))
 
         self.log.info("Import %s: anon-subject=%s, aquisition=%s",
                       path, anon_subject, acqid)
@@ -67,11 +88,7 @@ class BidsConversion():
         self.anon_subject = anon_subject
 
         self.log = utils.get_logger(__class__)  # type: ignore
-        self.dataset = datalad.Dataset(self.dataset_path)
-        # TODO replace with datalad require_dataset?
-
-        # TODO if datasets do not exists (i.e. no configuration was done)
-        # -> warning + create them
+        self.dataset = get_dataset(self.dataset_path, self.log)
 
         self.config = ConfigHandler.get_instance().get("bids_conversion")
 
