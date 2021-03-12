@@ -482,15 +482,11 @@ class BidsGitHandling(GitBase):
                 )
 
             # add rule
-            try:
-                rule_file = self.determine_dir(
-                    section="datalad.hirni.dicom2spec", option="rules"
-                )
-                does_exist = True
-            except Exception:
-                does_exist = False
+            rule_file = self.determine_dir(
+                section="datalad.hirni.dicom2spec", option="rules"
+            )
 
-            if does_exist and self.check_if_to_be_committed(rule_file):
+            if rule_file and self.check_if_to_be_committed(rule_file):
                 datalad.save(rule_file, dataset=self.dataset_path,
                              message="Add/modify custom rule", to_git=True)
 
@@ -500,13 +496,10 @@ class BidsGitHandling(GitBase):
                                  message="Add rule_base file", to_git=True)
 
             # add procedures
-            try:
-                procedure_dir = self.determine_dir(section="datalad.locations",
-                                                   option="dataset-procedures")
-            except Exception:
-                does_exist = False
+            procedure_dir = self.determine_dir(section="datalad.locations",
+                                               option="dataset-procedures")
 
-            if does_exist and self.check_if_to_be_committed(procedure_dir):
+            if procedure_dir and self.check_if_to_be_committed(procedure_dir):
                 datalad.save(procedure_dir, dataset=self.dataset_path,
                              message="Add procedures", to_git=True)
                 # TODO check what happens if one procedure is only modified
@@ -524,7 +517,7 @@ class BidsGitHandling(GitBase):
 
             return configured_dir
 
-        raise Exception("No entry in datalad config")
+        return ""
 
     def remove_config_branch(self):
         """ Remove the config branch """

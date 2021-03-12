@@ -21,6 +21,8 @@ class ConfigHandler():
 
         ConfigHandler._instance = self
 
+        self.log = utils.get_logger(__class__)  # type: ignore
+
         self.config_file = config_file
         self.schema = {}
         self.config = self.get()
@@ -47,7 +49,8 @@ class ConfigHandler():
 
         self.schema[module] = schema
 
-    def validate(self, config: dict = None, module: str = None, schema: dict = None):
+    def validate(self, config: dict = None, module: str = None,
+                 schema: dict = None):
         """ Validate the configuration
 
         Checks that the configuration containes all parameters required for
@@ -73,8 +76,11 @@ class ConfigHandler():
             schemata_to_check = self.schema.values()
 
         for i in schemata_to_check:
-            jsonschema.validate(config, i)
-            # TODO catch jsonschema.exceptions.ValidationError for proper logging
+            try:
+                jsonschema.validate(config, i)
+            except jsonschema.exceptions.ValidationError:
+                self.log.exception("Validating jsonschema failed")
+                raise
 
     def get(self, module: str = None) -> dict:
         """ Reads the configuration from the config file
