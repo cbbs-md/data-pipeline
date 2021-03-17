@@ -25,7 +25,7 @@ bids_conversion:
     procedure_python_template: templates/procedure_template.py
     procedure_shell_template: templates/procedure_template.sh
 
-    rule_dir: code/costum_rules
+    rule_dir: code/custom_rules
     rule_name: custom_rules.py
     rule_template: templates/custom_rules_template.py
 

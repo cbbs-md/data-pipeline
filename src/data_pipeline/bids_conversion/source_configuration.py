@@ -85,7 +85,7 @@ class SourceConfiguration():
 
         self._reset_studyspec()
 
-        # create costume rule dir
+        # create custom rule dir
         abs_rule_dir = Path(self.dataset_path, rule_dir)
         if not abs_rule_dir.exists():
             abs_rule_dir.mkdir(parents=True)
