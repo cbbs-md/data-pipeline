@@ -21,7 +21,7 @@ class Conversion():
 
         self.source_handler = None
 
-    def run(self, anon_subject: str, acqid: str):
+    def run(self, anon_subject: str, acqid: str, check_bids=True):
         """ Run the bids convertion
 
         Args:
@@ -30,7 +30,7 @@ class Conversion():
         """
 
         self._import_data(anon_subject, acqid)
-        self._convert(anon_subject, acqid)
+        self._convert(anon_subject, acqid, check_bids)
         self._cleanup()
 
     def _import_data(self, anon_subject: str, acqid: str):
@@ -50,7 +50,7 @@ class Conversion():
             acqid=acqid
         )
 
-    def _convert(self, anon_subject: str, acqid: str):
+    def _convert(self, anon_subject: str, acqid: str, check_bids=True):
         try:
             conversion = BidsConversion(self.bids_dataset_path, anon_subject)
         except utils.UsageError:
@@ -74,7 +74,12 @@ class Conversion():
                              .get_active_procedures())
         conversion.run_procedures(active_procedures)
 
-        conversion.run_bids_validator()
+        if check_bids:
+            conversion.run_bids_validator()
+
+    def run_bids_validator(self):
+        """ Run BIDS validator for the whole dataset """
+        BidsConversion(self.bids_dataset_path, "").run_bids_validator()
 
     def _cleanup(self):
         pass
@@ -97,10 +102,14 @@ def run(project_dir):
     conv = Conversion(source_dataset_path, bids_dataset_path,
                       data_path=subject_config["data_path"])
 
+    # TODO enable parallel run
     for subject in subject_config["subjects"]:
         # get anon_subject, acquid, and tarball
         anon_subject = subject["anon_subject"]
         acqid = subject["acqid"]
-        print("Convert acqid={}, anon_subject={}".format(acqid, anon_subject))
 
-        conv.run(anon_subject=anon_subject, acqid=acqid)
+        conv.run(anon_subject=anon_subject, acqid=acqid, check_bids=False)
+
+    # the validator checks all anon-subject anyway and thus only has to run
+    # once at the end
+    conv.run_bids_validator()
