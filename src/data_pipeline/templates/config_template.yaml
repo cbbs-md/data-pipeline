@@ -1,7 +1,7 @@
 bids_conversion:
     source:
         dataset_name: sourcedata
-        setup_procedure: cfg_hirni
+        setup_procedures: [cfg_hirni]
         patches:
             # Either the full path to the patch or use {data_pipeline_path}
             # to refer to the current path of the data-pipeline source code
@@ -10,7 +10,7 @@ bids_conversion:
         add_gitignore: true
     bids:
         dataset_name: bids
-        setup_procedure: cfg_bids
+        setup_procedures: [cfg_bids]
 #        patches:
 #            # Either the full path to the patch or use {data_pipeline_path}
 #            # to refer to the current path of the data-pipeline source code

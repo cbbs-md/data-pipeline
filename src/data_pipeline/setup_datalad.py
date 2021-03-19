@@ -50,11 +50,11 @@ class SetupDatalad():
             "type": "object",
             "properties": {
                 "dataset_name": {"type": "string"},
-                "setup_procedure": {"type": "string"},
+                "setup_procedures": {"type": "array"},
                 "patches": {"type": "array"},
                 "add_gitignore": {"type": "boolean"}
             },
-            "required": ["dataset_name", "setup_procedure"]
+            "required": ["dataset_name", "setup_procedures"]
         }
         # TODO make setup_procedure optional
 
@@ -76,24 +76,29 @@ class SetupDatalad():
         self.log.info("Create dataset %s", self.dataset_path)
 
         try:
-            prefix = "cfg_"
-            proc = self.config["setup_procedure"]
-            proc = proc[len(prefix):] if proc.startswith(prefix) else proc
-            with utils.ChangeWorkingDir(self.project_dir):
-                utils.check_cmd(
-                    ["datalad", "create",
-                     "-c", proc,
-                     self.dataset_path]
-                )
-            self.dataset = datalad.Dataset(self.dataset_path)
-
+            procs = self.config["setup_procedures"]
             # IMPORTANT: name of the procedure differs depending if it is an
             # argument for create or used in run_procedure:
             # create and command line use: hirni
             # run_procedure use full name: cfg_hirni
-            # self.dataset = datalad.create(str(self.dataset_path))
-            # datalad.run_procedure(spec=self.config["setup_procedure"],
-            #                       dataset=self.dataset)
+#            prefix = "cfg_"
+#            proc = proc[len(prefix):] if proc.startswith(prefix) else proc
+#            with utils.ChangeWorkingDir(self.project_dir):
+#                utils.check_cmd(
+#                    ["datalad", "create",
+#                     "-c", proc,
+#                     self.dataset_path]
+#                )
+#            self.dataset = datalad.Dataset(self.dataset_path)
+
+            self.dataset = datalad.create(str(self.dataset_path))
+            for spec in procs:
+                # use command line to suppress output
+                with utils.ChangeWorkingDir(self.dataset_path):
+                    utils.check_cmd(
+                        ["datalad", "run-procedure", spec]
+                    )
+#                datalad.run_procedure(spec=spec, dataset=self.dataset)
 
             self._apply_patches()
 

@@ -27,24 +27,24 @@ def configure(project_dir):
                         "type": "object",
                         "properties": {
                             "dataset_name": {"type": "string"},
-                            "setup_procedure": {"type": "string"},
+                            "setup_procedures": {"type": "array"},
                             "patches": {"type": "array"}
                         },
                         "required": [
                             "dataset_name",
-                            "setup_procedure"
+                            "setup_procedures"
                         ]
                     },
                     "bids": {
                         "type": "object",
                         "properties": {
                             "dataset_name": {"type": "string"},
-                            "setup_procedure": {"type": "string"},
+                            "setup_procedures": {"type": "array"},
                             "patches": {"type": "array"}
                         },
                         "required": [
                             "dataset_name",
-                            "setup_procedure"
+                            "setup_procedures"
                         ]
                     },
                     "default_procedure_dir": {"type": "string"},
