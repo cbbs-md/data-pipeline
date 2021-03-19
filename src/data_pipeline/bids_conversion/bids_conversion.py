@@ -144,6 +144,12 @@ class BidsConversion():
             # dataset but get not yet executed to get it from there
             self.log.info("Get heudiconv container")
 
+        if self._check_already_converted():
+            self.log.warning("Conversion for anon_subject %s already done. "
+                             "Skip.", self.anon_subject)
+            return
+
+        self.log.info("Convert anon_subject=%s", self.anon_subject)
         # since logging can not be controlled when using the datalad api, the
         # console output will be flooded -> circument it by using the command
         # line interface
@@ -159,6 +165,15 @@ class BidsConversion():
 #            # only_type=
 #        )
 
+    def _check_already_converted(self):
+        """ Check if data for this anon_subject was already converted """
+        converted_path = Path(self.dataset_path,
+                              "sub-{}".format(self.anon_subject))
+        if converted_path.exists():
+            return True
+
+        return False
+
     def run_procedures(self, procedures: dict):
         """ Run a list of procedures procedures
 
@@ -166,6 +181,9 @@ class BidsConversion():
             active_procedures: The procedures to run in the form
             {<proc name>: "parameters": <parameters as string>}
         """
+        if self._check_already_converted():
+            return
+
         # run procedures
         for procedure, values in procedures.items():
             proc_spec = "{} {}".format(procedure, values["parameters"])
