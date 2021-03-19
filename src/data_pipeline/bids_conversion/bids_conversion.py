@@ -136,13 +136,13 @@ class BidsConversion():
         Args:
             spec: A list of hirni studyspec files to use
         """
-        # TODO check if heudiconv container already downloaded, otherwise warn
-        # user that this might take some time
         heudiconv_container = Path(self.install_dataset_path, "code",
                                    "hirni-toolbox", "converters", "heudiconv",
                                    "heudiconv.simg")
         if not heudiconv_container.exists():
-            self.log.info("convert: Heudiconv container not downloaded.")
+            # This also triggers if container is downloaded inside the source
+            # dataset but get not yet executed to get it from there
+            self.log.info("Get heudiconv container")
 
         # since logging can not be controlled when using the datalad api, the
         # console output will be flooded -> circument it by using the command
