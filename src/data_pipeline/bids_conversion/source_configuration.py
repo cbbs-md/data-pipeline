@@ -336,8 +336,8 @@ class ProcedureHandling():
         target = Path(self.dataset_path, proc_dir, procedure_file_name)
         target = target.with_suffix(proc_type)
         if target.exists():
-            self.log.exception("Procedure with the name %s alread exists",
-                               procedure_file_name)
+            self.log.error("Procedure with the name %s alread exists",
+                           procedure_file_name)
             return
 
         shutil.copy(procedure_path, target)
