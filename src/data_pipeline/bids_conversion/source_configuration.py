@@ -268,6 +268,9 @@ class ProcedureHandling():
         self.log.info("Opening %s", target)
         click.edit(filename=str(target))
 
+        self.log.info("Procedure %s was created and can now be activated.",
+                      procedure_name)
+
     def _register_proc_dir(self, proc_dir: Union[str, Path],
                            overwrite: bool = False):
         """ Register procedure dir in datalad
@@ -338,6 +341,9 @@ class ProcedureHandling():
             return
 
         shutil.copy(procedure_path, target)
+
+        self.log.info("Procedure %s was created and can now be activated.",
+                      procedure_file_name)
 
     def get_active_procedures(self) -> dict:
         """ Get all procedures registered to be executed in the conversion

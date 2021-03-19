@@ -94,6 +94,7 @@ class SetupDatalad():
             self.dataset = datalad.create(str(self.dataset_path))
             for spec in procs:
                 # use command line to suppress output
+                self.log.info("Run %s", spec)
                 with utils.ChangeWorkingDir(self.dataset_path):
                     utils.check_cmd(
                         ["datalad", "run-procedure", spec]
