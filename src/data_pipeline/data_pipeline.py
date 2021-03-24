@@ -76,6 +76,8 @@ def main(setup, project, configure, run):
     config_filename = "config.yaml"
     config_path = Path(project, config_filename)
 
+    tool_name = "data-pipeline"
+
     if project:
         logging.info("Using project dir: %s", project)
         # check that project dir exists
@@ -84,16 +86,24 @@ def main(setup, project, configure, run):
             sys.exit(1)
 
     if setup:
-        logging.info("Setting up data-pipeline in %s", project)
+        logging.info("Setting up %s in %s", tool_name, project)
 
         # create a config file in the project dir
         source = Path(Path(__file__).parent.absolute(),
                       "templates", "config_template.yaml")
         shutil.copy(source, config_path)
 
-    ConfigHandler(config_file=config_path)
+    try:
+        ConfigHandler(config_file=config_path)
+    except FileNotFoundError:
+        logging.error(
+            "Not a correct project dir. Either use an existing project or set "
+            "one up. See --help for further information.")
+        sys.exit(1)
 
     if configure:
+        # TODO let user choose which modules to run
+
         bids_conversion.configure(project)
 
     if run:
