@@ -87,7 +87,8 @@ class GitBase():
         # an exception means, that path was changed
         return not utils.check_cmd(cmd)
 
-    def is_tracked(self, path: str) -> bool:
+    @staticmethod
+    def is_tracked(path: str) -> bool:
         """ Check if a path is tracked in git
 
         Args:
