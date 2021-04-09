@@ -87,8 +87,7 @@ class SourceConfiguration():
 
         # create custom rule dir
         abs_rule_dir = Path(self.dataset_path, rule_dir)
-        if not abs_rule_dir.exists():
-            abs_rule_dir.mkdir(parents=True)
+        abs_rule_dir.mkdir(parents=True, exist_ok=True)
 
         # copy rule_base and rule template
         rules_to_copy = [
@@ -249,8 +248,7 @@ class ProcedureHandling():
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
-        if not abs_proc_dir.exists():
-            abs_proc_dir.mkdir(parents=True)
+        abs_proc_dir.mkdir(parents=True, exist_ok=True)
 
         # register procedure dir in datalad
         self._register_proc_dir(proc_dir)
@@ -317,8 +315,7 @@ class ProcedureHandling():
 
         # create procedure dir
         abs_proc_dir = Path(self.dataset_path, proc_dir)
-        if not abs_proc_dir.exists():
-            abs_proc_dir.mkdir(parents=True)
+        abs_proc_dir.mkdir(parents=True, exist_ok=True)
 
         # register procedure dir in datalad
         try:

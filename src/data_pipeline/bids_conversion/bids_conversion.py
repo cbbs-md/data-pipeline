@@ -201,8 +201,7 @@ class BidsConversion():
         if not container_dir.is_absolute():
             container_dir = Path(self.dataset_path, container_dir)
 
-        if not container_dir.exists():
-            container_dir.mkdir(parents=True)
+        container_dir.mkdir(parents=True, exist_ok=True)
 
         # if no .bids-validator-config.json file exists create it
         utils.copy_template(
