@@ -16,8 +16,10 @@ class ConfigHandler():
         """ Virtually private constructor. """
 
         if ConfigHandler._instance is not None:
-            raise Exception("There can only be one ConfigHandler instance. "
-                            "Use get_instance to get it")
+            raise utils.UsageError(
+                "There can only be one ConfigHandler instance. "
+                "Use get_instance to get it"
+            )
 
         ConfigHandler._instance = self
 
@@ -57,7 +59,7 @@ class ConfigHandler():
         the bids configuration
 
         Args:
-            config: Optionale; The configuration to validate. If nothing is
+            config: Optional; The configuration to validate. If nothing is
                 set, `self.config` is used
             module: Optional; Do not check against all schemata but only
                 against the one from module.
