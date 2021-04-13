@@ -19,64 +19,58 @@ def configure(project_dir):
     schema = {
         "type": "object",
         "properties": {
-            "bids_conversion": {
+            "active_procedures": {"type": "object"},
+            "source": {
                 "type": "object",
                 "properties": {
-                    "active_procedures": {"type": "object"},
-                    "source": {
-                        "type": "object",
-                        "properties": {
-                            "dataset_name": {"type": "string"},
-                            "setup_procedures": {"type": "array"},
-                            "patches": {"type": "array"}
-                        },
-                        "required": [
-                            "dataset_name",
-                            "setup_procedures"
-                        ]
-                    },
-                    "bids": {
-                        "type": "object",
-                        "properties": {
-                            "dataset_name": {"type": "string"},
-                            "setup_procedures": {"type": "array"},
-                            "patches": {"type": "array"}
-                        },
-                        "required": [
-                            "dataset_name",
-                            "setup_procedures"
-                        ]
-                    },
-                    "default_procedure_dir": {"type": "string"},
-                    "procedure_python_template": {"type": "string"},
-                    "procedure_shell_template": {"type": "string"},
-                    "rule_dir": {"type": "string"},
-                    "rule_name": {"type": "string"},
-                    "rule_template": {"type": "string"},
-                    "validator_container_name": {"type": "string"},
-                    "validator_image_url": {"type": "string"},
-                    "container_dir": {"type": "string"},
-                    "config_acqid": {"type": "string"},
-                    "config_anon_subject": {"type": "string"},
+                    "dataset_name": {"type": "string"},
+                    "setup_procedures": {"type": "array"},
+                    "patches": {"type": "array"}
                 },
                 "required": [
-                    "source",
-                    "bids",
-                    "default_procedure_dir",
-                    "procedure_python_template",
-                    "procedure_shell_template",
-                    "rule_dir",
-                    "rule_name",
-                    "rule_template",
-                    "validator_container_name",
-                    "validator_image_url",
-                    "container_dir",
-                    "config_acqid",
-                    "config_anon_subject",
+                    "dataset_name",
+                    "setup_procedures"
                 ]
             },
+            "bids": {
+                "type": "object",
+                "properties": {
+                    "dataset_name": {"type": "string"},
+                    "setup_procedures": {"type": "array"},
+                    "patches": {"type": "array"}
+                },
+                "required": [
+                    "dataset_name",
+                    "setup_procedures"
+                ]
+            },
+            "default_procedure_dir": {"type": "string"},
+            "procedure_python_template": {"type": "string"},
+            "procedure_shell_template": {"type": "string"},
+            "rule_dir": {"type": "string"},
+            "rule_name": {"type": "string"},
+            "rule_template": {"type": "string"},
+            "validator_container_name": {"type": "string"},
+            "validator_image_url": {"type": "string"},
+            "container_dir": {"type": "string"},
+            "config_acqid": {"type": "string"},
+            "config_anon_subject": {"type": "string"},
         },
-        "required": ["bids_conversion"]
+        "required": [
+            "source",
+            "bids",
+            "default_procedure_dir",
+            "procedure_python_template",
+            "procedure_shell_template",
+            "rule_dir",
+            "rule_name",
+            "rule_template",
+            "validator_container_name",
+            "validator_image_url",
+            "container_dir",
+            "config_acqid",
+            "config_anon_subject",
+        ]
     }
     config_handler = ConfigHandler.get_instance()
     config_handler.add_schema("bids_conversion", schema)

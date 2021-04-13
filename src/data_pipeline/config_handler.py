@@ -26,7 +26,11 @@ class ConfigHandler():
         self.log = utils.get_logger(__class__)  # type: ignore
 
         self.config_file = config_file
-        self.schema = {}
+        self.schema = {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
         self.config = self.get()
 
     @staticmethod
@@ -49,40 +53,40 @@ class ConfigHandler():
             schema: The additional schema to add
         """
 
-        self.schema[module] = schema
+        self.schema["properties"][module] = schema
+        self.schema["required"].append(module)
 
     def validate(self, config: dict = None, module: str = None,
                  schema: dict = None):
         """ Validate the configuration
 
-        Checks that the configuration containes all parameters required for
+        Checks that the configuration contains all parameters required for
         the bids configuration
 
         Args:
             config: Optional; The configuration to validate. If nothing is
                 set, `self.config` is used
-            module: Optional; Do not check against all schemata but only
+            module: Optional; Do not check against the complete schema but only
                 against the one from module.
-            schema: Optinal: The schema to validate against. Ignore all other
-                schemata.
+            schema: Optional: The schema to validate against. If nothing is
+                set, `self.schema` is used.
         """
 
         if config is None:
             config = self.config
 
         if schema is not None:
-            schemata_to_check = [schema]
+            schema_to_check = schema
         elif module is not None:
-            schemata_to_check = [self.schema[module]]
+            schema_to_check = self.schema["properties"][module]
         else:
-            schemata_to_check = self.schema.values()
+            schema_to_check = self.schema
 
-        for i in schemata_to_check:
-            try:
-                jsonschema.validate(config, i)
-            except jsonschema.exceptions.ValidationError:
-                self.log.exception("Validating jsonschema failed")
-                raise
+        try:
+            jsonschema.validate(config, schema_to_check)
+        except jsonschema.exceptions.ValidationError as excp:
+            self.log.exception("Validating jsonschema failed")
+            raise utils.ConfigError(excp) from excp
 
     def get(self, module: str = None) -> dict:
         """ Reads the configuration from the config file
