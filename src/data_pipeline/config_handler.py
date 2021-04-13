@@ -107,7 +107,7 @@ class ConfigHandler():
         return self.config
 
     def update_parameter(self, module: str, parameter: str, value: Any):
-        """ Updates a parameter in the config file.
+        """ Updates a module parameter in the config file.
 
         Args:
             module: The module of which the configuration should be updated.

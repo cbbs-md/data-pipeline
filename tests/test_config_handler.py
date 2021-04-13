@@ -6,6 +6,7 @@ import copy
 from unittest import mock
 
 import pytest
+import yaml
 
 from data_pipeline.config_handler import ConfigHandler
 import data_pipeline.utils as utils
@@ -72,7 +73,7 @@ def test_add_schema(config_handler, schema):
 
 
 class TestValidate:
-    """ Collection of tests concering the validate method """
+    """ Collection of tests concerning the validate method """
 
     def test_external_config(self, config_handler, schema, config):
         config_handler.validate(config=config, schema=schema)
@@ -116,9 +117,89 @@ class TestValidate:
             config_handler.validate(module="not_existing_module")
 
 
-def test_write():
-    """ Check writing of a configuration """
+@pytest.fixture(name="write_config")
+def write_config_fixture(tmp_path):
+    def _write_config(config: dict) -> str:
+        config_file = tmp_path / "config.yaml"
+        with config_file.open('w') as config_f:
+            yaml.dump(config, config_f)
+
+        return config_file
+
+    return _write_config
 
 
-def test_update_parameter():
-    """ Check if a paramater is correctly updated """
+def read_config(config_file):
+    with config_file.open('r') as config_f:
+        return yaml.safe_load(config_f)
+
+
+class TestGet:
+    """ Collection of tests concerning the get method """
+
+    def test_complete_config(self, config_handler, write_config, config):
+        config_handler.config_file = write_config(config)
+        module_config = config_handler.get()
+        assert module_config == config
+
+    def test_module_config(self, config_handler, write_config, multi_config):
+        config_handler.config_file = write_config(multi_config)
+        module_config = config_handler.get("test_module")
+        assert module_config == multi_config["test_module"]
+
+
+class TestWrite():
+    """ Collection of tests concerning the write method """
+
+    def test_write(self, tmp_path, config_handler, config):
+
+        config_file = tmp_path / "config.yaml"
+        config_handler.config_file = config_file
+        config_handler.write(config)
+
+        assert config_file.exists()
+        assert read_config(config_file) == config
+
+    def test_not_valid_config(self, tmp_path, config_handler, config, schema):
+
+        config_file = tmp_path / "config.yaml"
+        config_handler.config_file = config_file
+        config_handler.schema = schema
+        config["price"] = "some_string"
+
+        with pytest.raises(utils.ConfigError):
+            config_handler.write(config)
+        assert not config_file.exists()
+
+
+class TestUpdateParameter:
+    """ Collection of tests concering the update_parameter method """
+
+    @pytest.fixture
+    def config_handler(self, multi_config, multi_schema, write_config):
+        config_file = write_config(multi_config)
+        config_handler = ConfigHandler(config_file=config_file)
+        config_handler.schema = multi_schema
+
+        return config_handler
+
+    def test_update_parameter(self, config_handler):
+
+        config_handler.update_parameter(module="test_module",
+                                        parameter="price",
+                                        value=5)
+        new_config = read_config(config_handler.config_file)
+        assert new_config["test_module"]["price"] == 5
+
+    def test_invalid_value(self, config_handler):
+
+        with pytest.raises(utils.ConfigError):
+            config_handler.update_parameter(module="test_module",
+                                            parameter="price",
+                                            value="something")
+
+    def test_invalid_module(self, config_handler):
+        with pytest.raises(KeyError):
+            config_handler.update_parameter(module="test_module_invalid",
+                                            parameter="price",
+                                            value=5)
