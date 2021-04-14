@@ -107,7 +107,7 @@ def configure(project_dir):
             repo.commit()
 
 
-def _ask_questions() -> Tuple[dict, dict]:
+def _ask_questions(**kwargs) -> Tuple[dict, dict]:
     """ Define and ask the questionary for the user"""
 
     choices = dict(
@@ -233,7 +233,7 @@ def _ask_questions() -> Tuple[dict, dict]:
             "default": lambda x: Path(x["procedure_file"]).stem
         },
     ]
-    return questionary.prompt(questions), choices
+    return questionary.prompt(questions, **kwargs), choices
 
 
 class StepSwitcher():
