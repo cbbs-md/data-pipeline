@@ -1,7 +1,7 @@
 """ Set up module namespace """
 
-from .configure import configure
-from .run import run
+from .configure_m import configure
+from .run_m import run
 
 __all__ = [
     "configure",

@@ -6,7 +6,7 @@
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
-from data_pipeline.bids_conversion.configure import _ask_questions
+from data_pipeline.bids_conversion.configure_m import _ask_questions
 
 
 def ask_with_patched_input(question, text):
