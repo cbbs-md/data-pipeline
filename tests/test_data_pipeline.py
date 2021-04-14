@@ -1,12 +1,10 @@
 """ Test the high level data_pipeline fuctionality """
 
-from importlib import reload
 import shutil
 import unittest.mock as mock
 from pathlib import Path
 
 from click.testing import CliRunner
-import pytest
 
 import data_pipeline
 from data_pipeline.data_pipeline import main
@@ -62,27 +60,20 @@ def test_setup(tmp_path):
     assert result.exit_code == 0
 
 
-@pytest.fixture(name="setup_project")
-def fixture_setup_project(tmp_path):
-    """ Sets up a proper project dir """
-    CliRunner().invoke(main, ["--project", tmp_path, "--setup"])
-    reload(data_pipeline.config_handler)
-
-
-def test_configure(tmp_path, setup_project):  # pylint: disable=unused-argument
+def test_configure(project):
     """ Test that configure option works """
     with mock.patch("data_pipeline.bids_conversion.configure") as mocked:
         result = CliRunner().invoke(main,
-                                    ["--project", tmp_path, "--configure"])
+                                    ["--project", project, "--configure"])
         assert not result.exception
         assert result.exit_code == 0
         assert mocked.called
 
 
-def test_run(tmp_path, setup_project):  # pylint: disable=unused-argument
+def test_run(project):
     """ Test that run option works """
     with mock.patch("data_pipeline.bids_conversion.run") as mock_run:
-        result = CliRunner().invoke(main, ["--project", tmp_path, "--run"])
+        result = CliRunner().invoke(main, ["--project", project, "--run"])
         assert not result.exception
         assert result.exit_code == 0
         assert mock_run.called

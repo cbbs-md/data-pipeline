@@ -4,9 +4,11 @@ from importlib import reload
 from pathlib import Path
 import shutil
 
+from click.testing import CliRunner
 import pytest
 
 import data_pipeline
+from data_pipeline.data_pipeline import main
 
 
 @pytest.fixture(autouse=True)
@@ -27,3 +29,12 @@ def config_file(tmp_path):
     shutil.copy(config_template, config_path)
 
     return config_path
+
+
+@pytest.fixture
+def project(tmp_path):
+    """ Sets up a proper project dir """
+    CliRunner().invoke(main, ["--project", tmp_path, "--setup"])
+    reload(data_pipeline.config_handler)
+
+    return tmp_path

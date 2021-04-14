@@ -173,7 +173,7 @@ class TestWrite():
 
 
 class TestUpdateParameter:
-    """ Collection of tests concering the update_parameter method """
+    """ Collection of tests concerning the update_parameter method """
 
     @pytest.fixture
     def config_handler(self, multi_config, multi_schema, write_config):
