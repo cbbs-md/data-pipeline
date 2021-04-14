@@ -5,8 +5,12 @@
 
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
+import pytest
 
+import data_pipeline
+from data_pipeline.bids_conversion import configure
 from data_pipeline.bids_conversion.configure_m import _ask_questions
+from data_pipeline.config_handler import ConfigHandler
 
 
 def ask_with_patched_input(question, text):
@@ -43,3 +47,30 @@ class TestQuestions:
         text = "8" + KeyInputs.ENTER + KeyInputs.ENTER + "\r"
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == "Exit"
+
+
+@pytest.fixture(name="setup_config_handler")
+def setup_config_handler_fixture(project):
+    ConfigHandler(config_file=project / "config.yaml")
+
+
+class TestConfigure:
+    """ Test configure function """
+
+    @pytest.fixture(autouse=True)
+    def auto_setup(self, setup_config_handler):
+        pass
+
+    # pylint: disable=unused-argument
+    def test_exit(self, monkeypatch, project):
+
+        def mock_ask_question():
+            return {"step_select": "Exit"}, {}
+
+        monkeypatch.setattr(data_pipeline.bids_conversion.configure_m,
+                            "_ask_questions", mock_ask_question)
+
+        configure(project)
+
+        assert (project / "sourcedata").exists()
+        assert (project / "bids").exists()
