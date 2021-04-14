@@ -54,6 +54,16 @@ def setup_config_handler_fixture(project):
     ConfigHandler(config_file=project / "config.yaml")
 
 
+@pytest.fixture(name="mock_ask")
+def mock_ask_fixture(monkeypatch):
+    def _mock_ask(answer, choice):
+        monkeypatch.setattr(data_pipeline.bids_conversion.configure_m,
+                            "_ask_questions",
+                            lambda: (answer, choice))
+
+    return _mock_ask
+
+
 class TestConfigure:
     """ Test configure function """
 
@@ -61,16 +71,8 @@ class TestConfigure:
     def auto_setup(self, setup_config_handler):
         pass
 
-    # pylint: disable=unused-argument
-    def test_exit(self, monkeypatch, project):
-
-        def mock_ask_question():
-            return {"step_select": "Exit"}, {}
-
-        monkeypatch.setattr(data_pipeline.bids_conversion.configure_m,
-                            "_ask_questions", mock_ask_question)
-
+    def test_exit(self, project, mock_ask):
+        mock_ask(answer={"step_select": "Exit"}, choice={})
         configure(project)
-
         assert (project / "sourcedata").exists()
         assert (project / "bids").exists()
