@@ -35,6 +35,38 @@ class KeyInputs:  # pylint: disable=missing-class-docstring
     TAB = "\x09"
 
 
+@pytest.fixture(name="choices")
+def choices_fixture():
+    return dict(
+        # step_select
+        import_data="Import data",
+        register_rule="Configure and register rule »",
+        add_procedure="Add procedure »",
+        preview="Generate preview",
+        check="Check for BIDS conformity",
+        cleanup="Cleanup",
+
+        # rule_select
+        rule_create="Create new rule",
+        rule_import="Import rule",
+
+        # procedure_select
+        proc_change="Change active procedures",
+        proc_create="Create new procedure",
+        proc_import="Import procedure",
+    )
+
+
+class Press:  # pylint: disable=missing-class-docstring
+    EXIT = "8" + KeyInputs.ENTER
+    REGISTER_RULE = "2" + KeyInputs.ENTER
+    ADD_PROCEDURE = "3" + KeyInputs.ENTER
+    PREVIEW = "4" + KeyInputs.ENTER
+    CHECK = "5" + KeyInputs.ENTER
+    CLEANUP = "6" + KeyInputs.ENTER
+    HELP = "7" + KeyInputs.ENTER
+
+
 class TestQuestions:
     """ Test interactive input """
 
@@ -44,9 +76,57 @@ class TestQuestions:
         assert answer["step_select"] == "Exit"
 
     def test_exit(self):
-        text = "8" + KeyInputs.ENTER + KeyInputs.ENTER + "\r"
+        text = Press.EXIT + KeyInputs.ENTER + "\r"
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == "Exit"
+
+    def test_import(self):
+        pass
+
+    def test_rule_return(self, choices):
+        text = Press.REGISTER_RULE + "3" + KeyInputs.ENTER + "\r"
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["register_rule"]
+        assert answer["rule_select"] == "Return"
+
+    def test_rule_create(self):
+        text = Press.REGISTER_RULE + "1" + KeyInputs.ENTER + "\r"
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        #TODO
+        # print(answer)
+
+    def test_rule_import(self):
+        pass
+
+    def test_procedure_return(self, choices):
+        text = Press.ADD_PROCEDURE + "4" + KeyInputs.ENTER + "\r"
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["add_procedure"]
+        assert answer["procedure_select"] == "Return"
+
+    def test_procedure_create_shell(self):
+        pass
+
+    def test_procedure_create_python(self):
+        pass
+
+    def test_procedure_import(self):
+        pass
+
+    def test_procedure_change(self):
+        pass
+
+    def test_preview(self):
+        pass
+
+    def test_check(self):
+        pass
+
+    def test_cleanup(self):
+        pass
+
+    def test_help(self):
+        pass
 
 
 @pytest.fixture(name="setup_config_handler")
