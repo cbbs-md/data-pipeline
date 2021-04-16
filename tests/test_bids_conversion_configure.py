@@ -71,61 +71,112 @@ class TestQuestions:
     """ Test interactive input """
 
     def test_default(self):
-        text = KeyInputs.ENTER + "\r"
+        text = KeyInputs.ENTER
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == "Exit"
 
     def test_exit(self):
-        text = Press.EXIT + KeyInputs.ENTER + "\r"
+        text = Press.EXIT + KeyInputs.ENTER
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == "Exit"
 
-    def test_import(self):
-        pass
+    def test_import(self, choices):
+        filename = "test"
+        text = "1" + KeyInputs.ENTER + filename + KeyInputs.ENTER
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["import_data"]
+        assert answer["data_path"] == filename
 
     def test_rule_return(self, choices):
-        text = Press.REGISTER_RULE + "3" + KeyInputs.ENTER + "\r"
+        text = Press.REGISTER_RULE + "3" + KeyInputs.ENTER
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == choices["register_rule"]
         assert answer["rule_select"] == "Return"
 
-    def test_rule_create(self):
-        text = Press.REGISTER_RULE + "1" + KeyInputs.ENTER + "\r"
+    def test_rule_create(self, choices):
+        text = Press.REGISTER_RULE + "1" + KeyInputs.ENTER
         answer, _ = ask_with_patched_input(_ask_questions, text)
-        #TODO
-        # print(answer)
+        assert answer["step_select"] == choices["register_rule"]
+        assert answer["rule_select"] == choices["rule_create"]
 
-    def test_rule_import(self):
-        pass
+    def test_rule_import(self, choices):
+        filename = "test"
+        text = (Press.REGISTER_RULE
+                + "2" + KeyInputs.ENTER
+                + filename + KeyInputs.ENTER)
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["register_rule"]
+        assert answer["rule_select"] == choices["rule_import"]
+        assert answer["rule_file"] == filename
 
     def test_procedure_return(self, choices):
-        text = Press.ADD_PROCEDURE + "4" + KeyInputs.ENTER + "\r"
+        text = Press.ADD_PROCEDURE + "4" + KeyInputs.ENTER
         answer, _ = ask_with_patched_input(_ask_questions, text)
         assert answer["step_select"] == choices["add_procedure"]
         assert answer["procedure_select"] == "Return"
 
-    def test_procedure_create_shell(self):
-        pass
+    def test_procedure_create_shell(self, choices):
+        filename = "test"
+        text = (Press.ADD_PROCEDURE
+                + "2" + KeyInputs.ENTER
+                + "1" + KeyInputs.ENTER
+                + filename + KeyInputs.ENTER)
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["add_procedure"]
+        assert answer["procedure_select"] == choices["proc_create"]
+        assert answer["procedure_type"] == "shell"
+        assert answer["procedure_name"] == filename
 
-    def test_procedure_create_python(self):
-        pass
+    def test_procedure_create_python(self, choices):
+        filename = "test"
+        text = (Press.ADD_PROCEDURE
+                + "2" + KeyInputs.ENTER
+                + "2" + KeyInputs.ENTER
+                + filename + KeyInputs.ENTER)
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["add_procedure"]
+        assert answer["procedure_select"] == choices["proc_create"]
+        assert answer["procedure_type"] == "python"
+        assert answer["procedure_name"] == filename
 
-    def test_procedure_import(self):
-        pass
+    def test_procedure_import(self, choices):
+        filepath = "test_path"
+        filename = "test_name"
+        text = (Press.ADD_PROCEDURE
+                + "3" + KeyInputs.ENTER
+                + filepath + KeyInputs.ENTER
+                + filename + KeyInputs.ENTER)
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["add_procedure"]
+        assert answer["procedure_select"] == choices["proc_import"]
+        assert answer["procedure_file"] == filepath
+        assert answer["procedure_file_name"] == filename
 
-    def test_procedure_change(self):
-        pass
+    def test_procedure_change(self, choices):
+        text = Press.ADD_PROCEDURE + "1" + KeyInputs.ENTER
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["add_procedure"]
+        assert answer["procedure_select"] == choices["proc_change"]
+        # Selection of procedures to activate/deactivate is not done inside
+        # of "_ask_questions"
 
-    def test_preview(self):
-        pass
+    def test_preview(self, choices):
+        text = Press.PREVIEW
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["preview"]
 
-    def test_check(self):
-        pass
+    def test_check(self, choices):
+        text = Press.CHECK
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["check"]
 
-    def test_cleanup(self):
-        pass
+    def test_cleanup(self, choices):
+        text = Press.CLEANUP
+        answer, _ = ask_with_patched_input(_ask_questions, text)
+        assert answer["step_select"] == choices["cleanup"]
 
     def test_help(self):
+        # not implemented yet
         pass
 
 
